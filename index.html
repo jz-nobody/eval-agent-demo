@@ -1360,6 +1360,8 @@ function renderNewAssignRow(type, idx) {
       </div>
     </div>
     <button class="assign-confirm-btn" onclick="confirmAssign('${type}',${idx})">确认</button>
+    <button class="assign-confirm-btn" style="background:var(--accent);" onclick="saveAssign('${type}',${idx})">保存</button>
+    <button class="assign-add-btn" onclick="addAssignRow('${type}',${idx})" title="增加一行">+</button>
   </div>`;
 }
 
@@ -1385,8 +1387,50 @@ function confirmAssign(type, idx) {
   const person = personEl.textContent;
   if (!count || count < 1) { alert('请输入有效的样本量'); return; }
   if (person === '选择标注人员') { alert('请选择标注人员'); return; }
+  alert(`已确认：分配 ${count} 条样本给 ${person}`);
+}
+
+function saveAssign(type, idx) {
+  const countEl = document.getElementById(`assignCount_${type}_${idx}`);
+  const personEl = document.getElementById(`assignPerson_${type}_${idx}`);
+  const count = parseInt(countEl.value);
+  const person = personEl.textContent;
+  if (!count || count < 1) { alert('请输入有效的样本量'); return; }
+  if (person === '选择标注人员') { alert('请选择标注人员'); return; }
   taskAssignments[type].push({ count, annotator: person });
-  // Re-render rows area
+  // Lock this row but keep add button
+  const row = document.getElementById(`assignNewRow_${type}_${idx}`);
+  row.classList.add('saved');
+  row.innerHTML = `<input type="number" value="${count}" min="1" disabled>
+    <div class="assign-select"><div class="assign-select-trigger">${person} &#9662;</div></div>
+    <span style="font-size:11px;color:var(--green);">&#10003; 已保存</span>
+    <button class="assign-add-btn" onclick="addAssignRow('${type}',${idx})" title="增加一行">+</button>`;
+}
+
+function addAssignRow(type, idx) {
+  const row = document.getElementById(`assignNewRow_${type}_${idx}`);
+  // If row is already saved, just add new row after it
+  if (row && row.classList.contains('saved')) {
+    const newIdx = taskAssignments[type].length;
+    const newRowHtml = renderNewAssignRow(type, newIdx);
+    row.insertAdjacentHTML('afterend', newRowHtml);
+    // Remove the + button from the saved row (only latest row should have +)
+    const addBtn = row.querySelector('.assign-add-btn');
+    if (addBtn) addBtn.remove();
+    return;
+  }
+  // If row not saved yet, validate first
+  const countEl = document.getElementById(`assignCount_${type}_${idx}`);
+  const personEl = document.getElementById(`assignPerson_${type}_${idx}`);
+  const count = parseInt(countEl.value);
+  const person = personEl.textContent;
+  if (!count || count < 1) { alert('请先填写当前行的样本量'); return; }
+  if (person === '选择标注人员') { alert('请先选择当前行的标注人员'); return; }
+  // Save current row if not saved
+  if (!taskAssignments[type].find(r => r.count === count && r.annotator === person)) {
+    taskAssignments[type].push({ count, annotator: person });
+  }
+  // Re-render all rows (saved rows + new empty row)
   document.getElementById(`assignRows_${type}`).innerHTML = renderAssignRows(type);
 }
 
