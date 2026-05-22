@@ -660,8 +660,8 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
     <!-- TASK CREATION PAGE -->
     <div class="task-create-page" id="taskCreatePage">
       <div class="task-create-header">
-        <h2>新建评测任务</h2>
         <button class="btn" onclick="closeTaskCreatePage()">返回</button>
+        <h2>新建评测任务</h2>
       </div>
       <div class="task-create-upper">
         <div class="flow-steps">
@@ -2227,11 +2227,11 @@ function showEvalStandard(el, idx) {
   page.innerHTML = `
     <div class="es-page">
       <div class="es-page-header">
+        <button class="ws-btn" onclick="closeEvalStandardPage()">返回</button>
         <h2 class="es-page-title">${s.name}</h2>
         <div style="display:flex;gap:8px;">
           <button class="ws-btn primary" onclick="toggleEsPageEdit(${idx})" id="esPageEditBtn">编辑</button>
           <button class="ws-btn primary" onclick="saveEsPageEdit(${idx})" id="esPageSaveBtn" style="display:none;">保存</button>
-          <button class="ws-btn" onclick="closeEvalStandardPage()">返回</button>
         </div>
       </div>
       <div class="es-page-body" style="overflow-y:auto;padding-bottom:32px;">
