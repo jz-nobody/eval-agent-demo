@@ -622,7 +622,6 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
         <button class="btn" onclick="closeTaskCreatePage()">返回</button>
       </div>
       <div class="task-create-upper">
-        <input class="task-name-input" placeholder="输入评测任务名称..." id="taskNameInput">
         <div class="flow-steps">
           <div class="flow-step">
             <div class="flow-step-node active" id="step1" onclick="switchStep(1)">评测样本集创建</div>
@@ -2051,26 +2050,50 @@ function showEvalStandard(el, idx) {
     <div class="es-page">
       <div class="es-page-header">
         <h2 class="es-page-title">${s.name}</h2>
-        <button class="ws-btn" onclick="closeEvalStandardPage()">返回</button>
+        <div style="display:flex;gap:8px;">
+          <button class="ws-btn primary" onclick="toggleEsPageEdit(${idx})" id="esPageEditBtn">编辑</button>
+          <button class="ws-btn primary" onclick="saveEsPageEdit(${idx})" id="esPageSaveBtn" style="display:none;">保存</button>
+          <button class="ws-btn" onclick="closeEvalStandardPage()">返回</button>
+        </div>
       </div>
-      <div class="es-page-body">
-        <div class="es-page-card">
-          <div class="es-page-row"><span class="es-page-label">描述</span><span class="es-page-value"><input value="${s.desc}" disabled class="es-page-input" data-field="desc"></span></div>
-          <div class="es-page-row"><span class="es-page-label">评测类型</span><span class="es-page-value"><select disabled data-field="type" class="es-page-select">
-            <option ${s.type==='规则匹配'?'selected':''}>规则匹配</option>
-            <option ${s.type==='Agent评测'?'selected':''}>Agent评测</option>
-            <option ${s.type==='人工评测'?'selected':''}>人工评测</option>
-          </select></span></div>
-          <div class="es-page-row"><span class="es-page-label">评测维度</span><span class="es-page-value"><div class="es-page-dims">${s.dims.map(d=>`<span class="es-page-dim-tag">${d}</span>`).join('')}</div></span></div>
-          <div class="es-page-row"><span class="es-page-label">通过阈值</span><span class="es-page-value"><input type="number" value="${s.threshold}" step="0.05" min="0" max="1" disabled data-field="threshold" class="es-page-input" style="width:80px;"></span></div>
-          <div class="es-page-row"><span class="es-page-label">评分方式</span><span class="es-page-value"><select disabled data-field="scoring" class="es-page-select">
-            <option ${s.scoring==='0-1 连续打分'?'selected':''}>0-1 连续打分</option>
-            <option ${s.scoring==='1-5 离散打分'?'selected':''}>1-5 离散打分</option>
-            <option ${s.scoring==='通过/不通过'?'selected':''}>通过/不通过</option>
-          </select></span></div>
-          <div class="es-page-actions">
-            <button class="ws-btn primary" onclick="toggleEsPageEdit(${idx})" id="esPageEditBtn">编辑</button>
-            <button class="ws-btn" onclick="saveEsPageEdit(${idx})" id="esPageSaveBtn" style="display:none;">保存</button>
+      <div class="es-page-body" style="overflow-y:auto;padding-bottom:32px;">
+        <div class="config-panel visible" style="display:block;">
+          <div class="config-group">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <label style="margin:0;">评测标准名称</label>
+            </div>
+            <input placeholder="输入评测标准名称..." value="${s.name}" disabled data-field="name" class="es-field">
+          </div>
+          <div class="config-row">
+            <div class="config-group">
+              <label>评测类型</label>
+              <select disabled data-field="type" class="es-field">
+                <option value="规则匹配" ${s.type==='规则匹配'?'selected':''}>规则匹配</option>
+                <option value="Agent评测" ${s.type==='Agent评测'?'selected':''}>Agent评测</option>
+                <option value="人工评测" ${s.type==='人工评测'?'selected':''}>人工评测</option>
+              </select>
+            </div>
+            <div class="config-group">
+              <label>评分方式</label>
+              <select disabled data-field="scoring" class="es-field">
+                <option ${s.scoring==='0-1 连续打分'?'selected':''}>0-1 连续打分</option>
+                <option ${s.scoring==='1-5 离散打分'?'selected':''}>1-5 离散打分</option>
+                <option ${s.scoring==='通过/不通过'?'selected':''}>通过/不通过</option>
+                <option ${s.scoring==='多标签分类'?'selected':''}>多标签分类</option>
+              </select>
+            </div>
+          </div>
+          <div class="config-group">
+            <label>评测标准</label>
+            <textarea disabled data-field="desc" class="es-field" placeholder="详细描述评测标准和评判依据...">${s.desc}</textarea>
+          </div>
+          <div class="config-group">
+            <label>评测维度</label>
+            <div class="dim-list">${s.dims.map(d=>`<div class="dim-tag selected">${d}</div>`).join('')}</div>
+          </div>
+          <div class="config-group">
+            <label>通过阈值</label>
+            <input type="number" value="${s.threshold}" step="0.05" min="0" max="1" style="width:120px;" disabled data-field="threshold" class="es-field">
           </div>
         </div>
       </div>
@@ -2087,25 +2110,25 @@ function closeEvalStandardPage() {
 
 function toggleEsPageEdit(idx) {
   const page = document.getElementById('evalStandardPage');
-  const inputs = page.querySelectorAll('input, select');
+  const inputs = page.querySelectorAll('.es-field');
   const editBtn = document.getElementById('esPageEditBtn');
   const saveBtn = document.getElementById('esPageSaveBtn');
-  inputs.forEach(el => { el.disabled = false; el.style.background = 'var(--bg)'; el.style.borderColor = 'var(--border)'; });
+  inputs.forEach(el => { el.disabled = false; });
   editBtn.style.display = 'none';
   saveBtn.style.display = 'inline-flex';
 }
 
 function saveEsPageEdit(idx) {
   const page = document.getElementById('evalStandardPage');
-  const inputs = page.querySelectorAll('input, select');
+  const inputs = page.querySelectorAll('.es-field');
   const editBtn = document.getElementById('esPageEditBtn');
   const saveBtn = document.getElementById('esPageSaveBtn');
   inputs.forEach(el => {
-    el.disabled = true; el.style.background = 'transparent'; el.style.borderColor = 'transparent';
+    el.disabled = true;
     const field = el.dataset.field;
     if (field && evalStandards[idx]) {
       if (field === 'threshold') evalStandards[idx][field] = parseFloat(el.value);
-      else evalStandards[idx][field] = el.value;
+      else evalStandards[idx][field] = el.tagName === 'TEXTAREA' ? el.value : el.value;
     }
   });
   editBtn.style.display = 'inline-flex';
