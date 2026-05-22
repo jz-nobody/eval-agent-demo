@@ -162,8 +162,10 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
 
 /* Dataset List (评测样本集) */
 .dataset-header { display:grid; grid-template-columns:28px 42px 1fr 120px 120px 120px 72px 100px; padding:6px 12px; font-size:10px; color:var(--text-muted); font-weight:500; letter-spacing:0.3px; border-bottom:1px solid var(--border-light); margin-bottom:4px; gap:8px; }
+.dataset-header span:nth-child(7) { text-align:center; }
 .dataset-item { display:grid; grid-template-columns:28px 42px 1fr 120px 120px 120px 72px 100px; align-items:center; padding:9px 12px; border-radius:var(--radius-sm); cursor:pointer; gap:8px; transition:all 0.1s; }
 .dataset-header.cols-6 { grid-template-columns:42px 1fr 120px 120px 120px 72px; }
+.dataset-header.cols-6 span:nth-child(6) { text-align:center; }
 .dataset-item.cols-6 { grid-template-columns:42px 1fr 120px 120px 120px 72px; }
 .dataset-item:hover { background:var(--bg-hover); }
 .dataset-item .ds-delete { font-size:14px; cursor:pointer; color:var(--text-muted); opacity:0.4; transition:all 0.15s; text-align:center; }
@@ -450,6 +452,18 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
 .task-assign-row .assign-add-btn:hover { border-color:var(--accent); color:var(--accent); }
 .task-assign-row.saved { opacity:0.7; }
 .task-assign-row.saved input, .task-assign-row.saved .assign-select-trigger { background:var(--bg-soft); pointer-events:none; }
+/* Objection UI for human_check */
+.objection-bar { display:flex; align-items:center; gap:12px; margin-bottom:12px; justify-content:flex-end; }
+.objection-btn { padding:6px 14px; font-size:12px; border-radius:var(--radius-sm); cursor:pointer; font-weight:500; border:1px solid var(--border); background:var(--bg-white); color:var(--text-secondary); transition:all 0.15s; }
+.objection-btn.active { background:var(--red); color:#fff; border-color:var(--red); }
+.objection-btn:hover { border-color:var(--red); color:var(--red); }
+.objection-btn.active:hover { background:#c62828; color:#fff; }
+.objection-input-area { display:none; margin-bottom:12px; padding:12px; background:var(--bg-white); border:1px solid var(--border-light); border-radius:var(--radius); }
+.objection-input-area.show { display:block; }
+.objection-input-area textarea { width:100%; min-height:60px; border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; font-size:12px; font-family:var(--font); resize:vertical; }
+.objection-input-area textarea:focus { outline:none; border-color:var(--accent); }
+.objection-input-area .objection-submit { margin-top:8px; padding:5px 14px; font-size:11px; background:var(--red); color:#fff; border:none; border-radius:var(--radius-sm); cursor:pointer; font-weight:500; }
+.objection-input-area .objection-submit:hover { opacity:0.85; }
 
 /* === TASK CREATION PAGE === */
 .task-create-page { display:none; flex-direction:column; overflow:hidden; flex:1; }
@@ -742,11 +756,21 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
               <label>评分方式</label>
               <select>
                 <option>0-1 连续打分</option>
-                <option>1-5 离散打分</option>
+                <option>1-10 离散打分</option>
                 <option>通过/不通过</option>
                 <option>多标签分类</option>
               </select>
             </div>
+          </div>
+          <div class="config-group">
+            <label>评测Agent</label>
+            <select>
+              <option value="qwen-max">qwen-max</option>
+              <option value="qwen-plus">qwen-plus</option>
+              <option value="qwen-turbo">qwen-turbo</option>
+              <option value="gpt-4o">gpt-4o</option>
+              <option value="claude-3.5-sonnet">claude-3.5-sonnet</option>
+            </select>
           </div>
           <div class="config-group">
             <label>评测标准</label>
@@ -1242,13 +1266,15 @@ function renderSamples() {
     container.innerHTML = renderReportGenerationView();
     return;
   }
-  // Special view: Human Check — progress + assignment + sample table
+  // Special view: Human Check — progress + assignment + objection + sample table
   if (activeNode === 'human_check') {
     const data = samples.human_check;
     const total = data.length;
     const done = data.filter(s => s.status === 'done' || s.statusText === '已校验').length;
     const pct = total > 0 ? Math.round(done / total * 100) : 0;
     let html = renderTaskAssignPanel('check', pct, done, total);
+    html += `<div class="objection-bar"><button class="objection-btn" onclick="toggleObjection(this)">是否异议</button></div>`;
+    html += `<div class="objection-input-area" id="objectionArea"><textarea placeholder="请输入异议原因..." id="objectionText"></textarea><button class="objection-submit" onclick="submitObjection()">提交异议</button></div>`;
     html += `<div class="sample-list">
       <div class="sample-list-header"><span>ID</span><span>内容</span><span>状态</span><span>分数</span><span>评测</span></div>`;
     html += data.map(s => `
@@ -1361,6 +1387,21 @@ function confirmAssign(type, idx) {
   taskAssignments[type].push({ count, annotator: person });
   // Re-render rows area
   document.getElementById(`assignRows_${type}`).innerHTML = renderAssignRows(type);
+}
+
+function toggleObjection(btn) {
+  btn.classList.toggle('active');
+  const area = document.getElementById('objectionArea');
+  area.classList.toggle('show');
+}
+
+function submitObjection() {
+  const text = document.getElementById('objectionText').value.trim();
+  if (!text) { alert('请输入异议原因'); return; }
+  alert('异议已提交：' + text);
+  document.getElementById('objectionText').value = '';
+  document.getElementById('objectionArea').classList.remove('show');
+  document.querySelector('.objection-btn').classList.remove('active');
 }
 
 function renderManualDatasetView() {
@@ -2161,10 +2202,10 @@ function applyPermission(spaceName) {
 
 // === EVAL STANDARD PANEL (Sidebar) ===
 const evalStandards = [
-  { name:'意图分类评测', desc:'评估Agent对用户意图的识别准确度', type:'Agent评测', dims:['文本相关性','准确性','安全性'], threshold:0.8, scoring:'0-1 连续打分' },
-  { name:'答案质量评测', desc:'评估Agent回复的完整性和实用性', type:'Agent评测', dims:['回复质量','完整性','准确性'], threshold:0.75, scoring:'1-5 离散打分' },
-  { name:'商品相关性评测', desc:'评估推荐商品与用户需求的匹配程度', type:'规则匹配', dims:['商品相关性','准确性'], threshold:0.85, scoring:'0-1 连续打分' },
-  { name:'安全性检测', desc:'检测Agent回复是否包含敏感或违规内容', type:'Agent评测', dims:['安全性'], threshold:0.95, scoring:'通过/不通过' },
+  { name:'意图分类评测', desc:'评估Agent对用户意图的识别准确度', type:'Agent评测', dims:['文本相关性','准确性','安全性'], threshold:0.8, scoring:'0-1 连续打分', agent:'qwen-max' },
+  { name:'答案质量评测', desc:'评估Agent回复的完整性和实用性', type:'Agent评测', dims:['回复质量','完整性','准确性'], threshold:0.75, scoring:'1-10 离散打分', agent:'qwen-plus' },
+  { name:'商品相关性评测', desc:'评估推荐商品与用户需求的匹配程度', type:'规则匹配', dims:['商品相关性','准确性'], threshold:0.85, scoring:'0-1 连续打分', agent:'qwen-max' },
+  { name:'安全性检测', desc:'检测Agent回复是否包含敏感或违规内容', type:'Agent评测', dims:['安全性'], threshold:0.95, scoring:'通过/不通过', agent:'qwen-turbo' },
 ];
 
 function showEvalStandard(el, idx) {
@@ -2213,11 +2254,21 @@ function showEvalStandard(el, idx) {
               <label>评分方式</label>
               <select disabled data-field="scoring" class="es-field">
                 <option ${s.scoring==='0-1 连续打分'?'selected':''}>0-1 连续打分</option>
-                <option ${s.scoring==='1-5 离散打分'?'selected':''}>1-5 离散打分</option>
+                <option ${s.scoring==='1-10 离散打分'?'selected':''}>1-10 离散打分</option>
                 <option ${s.scoring==='通过/不通过'?'selected':''}>通过/不通过</option>
                 <option ${s.scoring==='多标签分类'?'selected':''}>多标签分类</option>
               </select>
             </div>
+          </div>
+          <div class="config-group">
+            <label>评测Agent</label>
+            <select disabled data-field="agent" class="es-field">
+              <option value="qwen-max" ${s.agent==='qwen-max'?'selected':''}>qwen-max</option>
+              <option value="qwen-plus" ${s.agent==='qwen-plus'?'selected':''}>qwen-plus</option>
+              <option value="qwen-turbo" ${s.agent==='qwen-turbo'?'selected':''}>qwen-turbo</option>
+              <option value="gpt-4o" ${s.agent==='gpt-4o'?'selected':''}>gpt-4o</option>
+              <option value="claude-3.5-sonnet" ${s.agent==='claude-3.5-sonnet'?'selected':''}>claude-3.5-sonnet</option>
+            </select>
           </div>
           <div class="config-group">
             <label>评测标准</label>
