@@ -414,6 +414,15 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
 .tc-auto-controls.show { display:flex; }
 .tc-progress { display:none; align-items:center; gap:10px; margin-top:8px; }
 .tc-progress.show { display:flex; }
+/* Toggle switch */
+.tc-toggle-row { display:flex; align-items:center; gap:12px; }
+.tc-toggle-label { font-size:12.5px; color:var(--text-secondary); }
+.tc-toggle { position:relative; width:40px; height:22px; background:var(--border); border-radius:11px; cursor:pointer; transition:background 0.25s; flex-shrink:0; }
+.tc-toggle.on { background:var(--accent); }
+.tc-toggle::after { content:''; position:absolute; top:2px; left:2px; width:18px; height:18px; background:#fff; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.18); transition:transform 0.25s; }
+.tc-toggle.on::after { transform:translateX(18px); }
+.tc-auto-inline { display:none; align-items:center; gap:10px; margin-left:8px; }
+.tc-auto-inline.show { display:flex; }
 
 /* === TASK CREATION PAGE === */
 .task-create-page { display:none; flex-direction:column; overflow:hidden; flex:1; }
@@ -649,28 +658,22 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
           </div>
           <div class="config-group">
             <label>样本生成方式</label>
-            <div class="tc-inline-row">
-              <div class="ws-radio-group">
-                <div class="ws-radio-item active" onclick="tcSelectGenMode(this,'manual')">
-                  <div class="ws-radio-dot"></div>人工上传
+            <div class="tc-toggle-row">
+              <span class="tc-toggle-label">自动生成</span>
+              <div class="tc-toggle" id="tcAutoGenToggle" onclick="tcToggleAutoGen()"></div>
+              <div class="tc-auto-inline" id="tcAutoInline">
+                <div class="ws-model-select" id="tcModelSelector" onclick="toggleModelSelector('tcModelSelector')">
+                  <span id="tcModelLabel">Qwen-Max</span>
+                  <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="2,3.5 5,6.5 8,3.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                  <div class="model-selector-list">
+                    <div class="model-selector-item active" onclick="selectModel(event,'tcModelSelector','Qwen-Max')">Qwen-Max</div>
+                    <div class="model-selector-item" onclick="selectModel(event,'tcModelSelector','Qwen-Plus')">Qwen-Plus</div>
+                    <div class="model-selector-item" onclick="selectModel(event,'tcModelSelector','Claude-3.5')">Claude-3.5</div>
+                    <div class="model-selector-item" onclick="selectModel(event,'tcModelSelector','GPT-4o')">GPT-4o</div>
+                  </div>
                 </div>
-                <div class="ws-radio-item" onclick="tcSelectGenMode(this,'auto')">
-                  <div class="ws-radio-dot"></div>样本自动生产
-                </div>
+                <button class="ws-btn primary" onclick="tcStartGenerate()" id="tcStartGenBtn">开始生产</button>
               </div>
-            </div>
-            <div class="tc-auto-controls" id="tcAutoControls">
-              <div class="ws-model-select" id="tcModelSelector" onclick="toggleModelSelector('tcModelSelector')">
-                <span id="tcModelLabel">Qwen-Max</span>
-                <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="2,3.5 5,6.5 8,3.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
-                <div class="model-selector-list">
-                  <div class="model-selector-item active" onclick="selectModel(event,'tcModelSelector','Qwen-Max')">Qwen-Max</div>
-                  <div class="model-selector-item" onclick="selectModel(event,'tcModelSelector','Qwen-Plus')">Qwen-Plus</div>
-                  <div class="model-selector-item" onclick="selectModel(event,'tcModelSelector','Claude-3.5')">Claude-3.5</div>
-                  <div class="model-selector-item" onclick="selectModel(event,'tcModelSelector','GPT-4o')">GPT-4o</div>
-                </div>
-              </div>
-              <button class="ws-btn primary" onclick="tcStartGenerate()" id="tcStartGenBtn">开始生产</button>
             </div>
             <div class="tc-progress" id="tcProgressWrap">
               <div class="ws-progress-track"><div class="ws-progress-fill" id="tcProgressFill" style="width:0%"></div></div>
@@ -2118,13 +2121,17 @@ function tcSelectUpload(el, type) {
   if (odps) odps.classList.toggle('show', type === 'odps');
 }
 
-function tcSelectGenMode(el, mode) {
-  el.parentElement.querySelectorAll('.ws-radio-item').forEach(i => i.classList.remove('active'));
-  el.classList.add('active');
-  const controls = document.getElementById('tcAutoControls');
-  if (controls) controls.classList.toggle('show', mode === 'auto');
-  const progress = document.getElementById('tcProgressWrap');
-  if (progress && mode === 'manual') progress.classList.remove('show');
+function tcToggleAutoGen() {
+  const toggle = document.getElementById('tcAutoGenToggle');
+  const inline = document.getElementById('tcAutoInline');
+  const isOn = toggle.classList.toggle('on');
+  inline.classList.toggle('show', isOn);
+  if (!isOn) {
+    const progress = document.getElementById('tcProgressWrap');
+    if (progress) progress.classList.remove('show');
+    const result = document.getElementById('tcGenResultWrap');
+    if (result) result.classList.remove('show');
+  }
 }
 
 function tcStartGenerate() {
