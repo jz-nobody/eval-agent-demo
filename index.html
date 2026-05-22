@@ -713,16 +713,6 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
                   </div>
                 </div>
                 <input type="number" class="tc-sample-count-input" placeholder="样本数量" min="1" value="100" id="tcSampleCountInput">
-                <div class="ws-model-select" id="tcModelSelector" onclick="toggleModelSelector('tcModelSelector')">
-                  <span id="tcModelLabel">Qwen-Max</span>
-                  <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="2,3.5 5,6.5 8,3.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
-                  <div class="model-selector-list">
-                    <div class="model-selector-item active" onclick="selectModel(event,'tcModelSelector','Qwen-Max')">Qwen-Max</div>
-                    <div class="model-selector-item" onclick="selectModel(event,'tcModelSelector','Qwen-Plus')">Qwen-Plus</div>
-                    <div class="model-selector-item" onclick="selectModel(event,'tcModelSelector','Claude-3.5')">Claude-3.5</div>
-                    <div class="model-selector-item" onclick="selectModel(event,'tcModelSelector','GPT-4o')">GPT-4o</div>
-                  </div>
-                </div>
                 <button class="ws-btn primary" onclick="tcStartGenerate()" id="tcStartGenBtn">开始生产</button>
               </div>
             </div>
@@ -1451,16 +1441,16 @@ function renderManualDatasetView() {
           </div>
         </div>
         <div class="ws-auto-gen-controls" id="autoGenControls" style="display:none;">
-          <div class="ws-model-select" id="wsModelSelector" onclick="toggleModelSelector('wsModelSelector')">
-            <span id="wsModelLabel">Qwen-Max</span>
+          <div class="ws-model-select" id="wsPipelineSelector" onclick="toggleModelSelector('wsPipelineSelector')">
+            <span id="wsPipelineLabel">选择生产链路</span>
             <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="2,3.5 5,6.5 8,3.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
             <div class="model-selector-list">
-              <div class="model-selector-item active" onclick="selectModel(event,'wsModelSelector','Qwen-Max')">Qwen-Max</div>
-              <div class="model-selector-item" onclick="selectModel(event,'wsModelSelector','Qwen-Plus')">Qwen-Plus</div>
-              <div class="model-selector-item" onclick="selectModel(event,'wsModelSelector','Claude-3.5')">Claude-3.5</div>
-              <div class="model-selector-item" onclick="selectModel(event,'wsModelSelector','GPT-4o')">GPT-4o</div>
+              <div class="model-selector-item" onclick="selectModel(event,'wsPipelineSelector','淘宝购物agent v1链路')">淘宝购物agent v1链路</div>
+              <div class="model-selector-item" onclick="selectModel(event,'wsPipelineSelector','淘宝购物agent v2链路')">淘宝购物agent v2链路</div>
+              <div class="model-selector-item" onclick="selectModel(event,'wsPipelineSelector','淘宝购物agent算法 v1链路')">淘宝购物agent算法 v1链路</div>
             </div>
           </div>
+          <input type="number" class="tc-sample-count-input" placeholder="样本数量" min="1" value="100" id="wsSampleCountInput">
           <button class="ws-btn primary" onclick="startAutoGenerate()" id="startGenBtn">开始生产</button>
         </div>
         <div class="ws-progress-bar" id="genProgressWrap" style="display:none;">
