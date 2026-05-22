@@ -423,8 +423,9 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
 .tc-toggle.on { background:var(--accent); }
 .tc-toggle::after { content:''; position:absolute; top:2px; left:2px; width:18px; height:18px; background:#fff; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.18); transition:transform 0.25s; }
 .tc-toggle.on::after { transform:translateX(18px); }
-.tc-auto-inline { display:none; align-items:center; gap:10px; margin-left:8px; }
+.tc-auto-inline { display:none; align-items:center; gap:10px; margin-left:8px; flex-wrap:wrap; }
 .tc-auto-inline.show { display:flex; }
+.tc-sample-count-input { width:90px; padding:7px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; font-family:var(--font); }
 /* Task Assignment Panel */
 .task-assign-panel { background:var(--bg-white); border:1px solid var(--border-light); border-radius:var(--radius); padding:16px 20px; margin-bottom:16px; }
 .task-assign-header { display:flex; align-items:center; gap:16px; margin-bottom:12px; }
@@ -702,6 +703,16 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
               <span class="tc-toggle-label">自动生成</span>
               <div class="tc-toggle" id="tcAutoGenToggle" onclick="tcToggleAutoGen()"></div>
               <div class="tc-auto-inline" id="tcAutoInline">
+                <div class="ws-model-select" id="tcPipelineSelector" onclick="toggleModelSelector('tcPipelineSelector')">
+                  <span id="tcPipelineLabel">选择生产链路</span>
+                  <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="2,3.5 5,6.5 8,3.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                  <div class="model-selector-list">
+                    <div class="model-selector-item" onclick="selectModel(event,'tcPipelineSelector','淘宝购物agent v1链路')">淘宝购物agent v1链路</div>
+                    <div class="model-selector-item" onclick="selectModel(event,'tcPipelineSelector','淘宝购物agent v2链路')">淘宝购物agent v2链路</div>
+                    <div class="model-selector-item" onclick="selectModel(event,'tcPipelineSelector','淘宝购物agent算法 v1链路')">淘宝购物agent算法 v1链路</div>
+                  </div>
+                </div>
+                <input type="number" class="tc-sample-count-input" placeholder="样本数量" min="1" value="100" id="tcSampleCountInput">
                 <div class="ws-model-select" id="tcModelSelector" onclick="toggleModelSelector('tcModelSelector')">
                   <span id="tcModelLabel">Qwen-Max</span>
                   <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="2,3.5 5,6.5 8,3.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
