@@ -423,6 +423,33 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
 .tc-toggle.on::after { transform:translateX(18px); }
 .tc-auto-inline { display:none; align-items:center; gap:10px; margin-left:8px; }
 .tc-auto-inline.show { display:flex; }
+/* Task Assignment Panel */
+.task-assign-panel { background:var(--bg-white); border:1px solid var(--border-light); border-radius:var(--radius); padding:16px 20px; margin-bottom:16px; }
+.task-assign-header { display:flex; align-items:center; gap:16px; margin-bottom:12px; }
+.task-assign-progress { flex:1; }
+.task-assign-progress-label { font-size:12px; color:var(--text-secondary); margin-bottom:4px; display:flex; justify-content:space-between; }
+.task-assign-progress-bar { height:8px; background:var(--bg); border-radius:4px; overflow:hidden; border:1px solid var(--border-light); }
+.task-assign-progress-fill { height:100%; background:linear-gradient(90deg, var(--accent), var(--green)); border-radius:4px; transition:width 0.3s; }
+.task-assign-btn { padding:6px 14px; font-size:12px; background:var(--accent); color:#fff; border:none; border-radius:var(--radius-sm); cursor:pointer; font-weight:500; white-space:nowrap; }
+.task-assign-btn:hover { background:var(--accent-deep); }
+.task-assign-rows { display:none; }
+.task-assign-rows.show { display:block; }
+.task-assign-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border-light); }
+.task-assign-row:last-child { border-bottom:none; }
+.task-assign-row input[type="number"] { width:80px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; font-family:var(--font); }
+.task-assign-row .assign-select { position:relative; min-width:140px; }
+.task-assign-row .assign-select-trigger { padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:12px; cursor:pointer; background:var(--bg-white); display:flex; align-items:center; justify-content:space-between; gap:6px; }
+.task-assign-row .assign-select-trigger:hover { border-color:var(--accent); }
+.task-assign-row .assign-dropdown { position:absolute; top:100%; left:0; right:0; background:var(--bg-white); border:1px solid var(--border); border-radius:var(--radius-sm); box-shadow:var(--shadow-md); z-index:100; display:none; max-height:140px; overflow-y:auto; }
+.task-assign-row .assign-dropdown.open { display:block; }
+.task-assign-row .assign-dropdown-item { padding:6px 10px; font-size:12px; cursor:pointer; }
+.task-assign-row .assign-dropdown-item:hover { background:var(--bg-hover); }
+.task-assign-row .assign-confirm-btn { padding:5px 12px; font-size:11px; background:var(--green); color:#fff; border:none; border-radius:var(--radius-sm); cursor:pointer; font-weight:500; }
+.task-assign-row .assign-confirm-btn:hover { opacity:0.85; }
+.task-assign-row .assign-add-btn { width:24px; height:24px; border-radius:50%; border:1px dashed var(--border); background:var(--bg-white); cursor:pointer; font-size:14px; color:var(--text-muted); display:flex; align-items:center; justify-content:center; }
+.task-assign-row .assign-add-btn:hover { border-color:var(--accent); color:var(--accent); }
+.task-assign-row.saved { opacity:0.7; }
+.task-assign-row.saved input, .task-assign-row.saved .assign-select-trigger { background:var(--bg-soft); pointer-events:none; }
 
 /* === TASK CREATION PAGE === */
 .task-create-page { display:none; flex-direction:column; overflow:hidden; flex:1; }
@@ -1180,7 +1207,15 @@ function renderSamples() {
     const data = samples[activeNode];
     const start = (currentPage - 1) * PAGE_SIZE;
     const pageData = data.slice(start, start + PAGE_SIZE);
-    let html = `<div class="sample-list">
+    let html = '';
+    // Human Eval: add progress + task assignment
+    if (activeNode === 'human_eval') {
+      const total = data.length;
+      const done = data.filter(s => s.evalStatus === '已评测').length;
+      const pct = total > 0 ? Math.round(done / total * 100) : 0;
+      html += renderTaskAssignPanel('eval', pct, done, total);
+    }
+    html += `<div class="sample-list">
       <div class="dataset-header cols-6"><span>ID</span><span>用户输入</span><span>调用Skill</span><span>调用Agent</span><span>调用Tools</span><span>评测状态</span></div>`;
     html += pageData.map(s => `
       <div class="dataset-item cols-6" onclick="openSampleDetail('${s.id}')">
@@ -1207,6 +1242,28 @@ function renderSamples() {
     container.innerHTML = renderReportGenerationView();
     return;
   }
+  // Special view: Human Check — progress + assignment + sample table
+  if (activeNode === 'human_check') {
+    const data = samples.human_check;
+    const total = data.length;
+    const done = data.filter(s => s.status === 'done' || s.statusText === '已校验').length;
+    const pct = total > 0 ? Math.round(done / total * 100) : 0;
+    let html = renderTaskAssignPanel('check', pct, done, total);
+    html += `<div class="sample-list">
+      <div class="sample-list-header"><span>ID</span><span>内容</span><span>状态</span><span>分数</span><span>评测</span></div>`;
+    html += data.map(s => `
+      <div class="sample-item" onclick="openSampleDetail('${s.id}')">
+        <div class="s-id">${s.id}</div>
+        <div class="s-content">${s.content}</div>
+        <div class="s-status ${s.status}">${s.statusText}</div>
+        <div class="s-score" style="color:${s.score==='-'?'var(--text-muted)':parseFloat(s.score)>=0.8?'var(--green)':parseFloat(s.score)>=0.6?'var(--orange)':'var(--red)'}">${s.score}</div>
+        <div class="s-agent">${s.agent}</div>
+      </div>
+    `).join('');
+    html += '</div>';
+    container.innerHTML = html;
+    return;
+  }
   
   const data = samples[activeNode] || samples['judge_a'];
   const start = (currentPage - 1) * PAGE_SIZE;
@@ -1225,6 +1282,85 @@ function renderSamples() {
   html += renderPagination(data.length);
   html += '</div>';
   container.innerHTML = html;
+}
+
+// Task assignment state
+const taskAssignments = { eval: [], check: [] };
+const annotators = ['张三', '李四', '王五', '赵六', '孙七', '周八'];
+
+function renderTaskAssignPanel(type, pct, done, total) {
+  const label = type === 'eval' ? '评测' : '校验';
+  const panelId = `assignPanel_${type}`;
+  const rowsId = `assignRows_${type}`;
+  return `<div class="task-assign-panel" id="${panelId}">
+    <div class="task-assign-header">
+      <div class="task-assign-progress">
+        <div class="task-assign-progress-label"><span>整体${label}进度</span><span>${done}/${total} (${pct}%)</span></div>
+        <div class="task-assign-progress-bar"><div class="task-assign-progress-fill" style="width:${pct}%"></div></div>
+      </div>
+      <button class="task-assign-btn" onclick="toggleAssignPanel('${type}')">分配任务</button>
+    </div>
+    <div class="task-assign-rows" id="${rowsId}">
+      ${renderAssignRows(type)}
+    </div>
+  </div>`;
+}
+
+function renderAssignRows(type) {
+  const rows = taskAssignments[type];
+  let html = '';
+  rows.forEach((r, i) => {
+    html += `<div class="task-assign-row saved">
+      <input type="number" value="${r.count}" min="1" disabled>
+      <div class="assign-select"><div class="assign-select-trigger">${r.annotator} &#9662;</div></div>
+      <span style="font-size:11px;color:var(--green);">&#10003; 已分配</span>
+    </div>`;
+  });
+  // Add active row
+  html += renderNewAssignRow(type, rows.length);
+  return html;
+}
+
+function renderNewAssignRow(type, idx) {
+  return `<div class="task-assign-row" id="assignNewRow_${type}_${idx}">
+    <input type="number" placeholder="样本量" min="1" id="assignCount_${type}_${idx}">
+    <div class="assign-select">
+      <div class="assign-select-trigger" onclick="toggleAnnotatorDropdown('${type}',${idx})">
+        <span id="assignPerson_${type}_${idx}">选择标注人员</span> &#9662;
+      </div>
+      <div class="assign-dropdown" id="assignDropdown_${type}_${idx}">
+        ${annotators.map(a => `<div class="assign-dropdown-item" onclick="selectAnnotator('${type}',${idx},'${a}')">${a}</div>`).join('')}
+      </div>
+    </div>
+    <button class="assign-confirm-btn" onclick="confirmAssign('${type}',${idx})">确认</button>
+  </div>`;
+}
+
+function toggleAssignPanel(type) {
+  const rows = document.getElementById(`assignRows_${type}`);
+  rows.classList.toggle('show');
+}
+
+function toggleAnnotatorDropdown(type, idx) {
+  const dd = document.getElementById(`assignDropdown_${type}_${idx}`);
+  dd.classList.toggle('open');
+}
+
+function selectAnnotator(type, idx, name) {
+  document.getElementById(`assignPerson_${type}_${idx}`).textContent = name;
+  document.getElementById(`assignDropdown_${type}_${idx}`).classList.remove('open');
+}
+
+function confirmAssign(type, idx) {
+  const countEl = document.getElementById(`assignCount_${type}_${idx}`);
+  const personEl = document.getElementById(`assignPerson_${type}_${idx}`);
+  const count = parseInt(countEl.value);
+  const person = personEl.textContent;
+  if (!count || count < 1) { alert('请输入有效的样本量'); return; }
+  if (person === '选择标注人员') { alert('请选择标注人员'); return; }
+  taskAssignments[type].push({ count, annotator: person });
+  // Re-render rows area
+  document.getElementById(`assignRows_${type}`).innerHTML = renderAssignRows(type);
 }
 
 function renderManualDatasetView() {
