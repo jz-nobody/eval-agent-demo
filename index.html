@@ -361,6 +361,17 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
 .ws-text-input:focus { border-color:var(--accent); outline:none; box-shadow:0 0 0 3px var(--accent-glow); }
 .ws-auto-gen-controls { display:flex; align-items:center; gap:10px; }
 .ws-model-select { position:relative; padding:8px 12px; border:1px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text); background:var(--bg-white); min-width:120px; transition:border-color 0.15s; }
+.selector-clear-x { display:none; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:var(--bg-soft); color:var(--text-light); font-size:13px; line-height:1; font-weight:600; cursor:pointer; margin-left:auto; flex-shrink:0; transition:background 0.15s, color 0.15s; }
+.selector-clear-x:hover { background:#fce4e4; color:#c62828; }
+.ws-model-select.has-value .selector-clear-x { display:inline-flex; }
+.tc-skill-wrap { position:relative; display:inline-block; }
+.tc-skill-wrap .selector-clear-x { position:absolute; right:6px; top:50%; transform:translateY(-50%); display:none; }
+.tc-skill-wrap.has-value .selector-clear-x { display:inline-flex; }
+.tc-skill-wrap.has-value select { padding-right:28px; }
+.es-select-wrap { position:relative; display:inline-block; }
+.es-select-wrap .selector-clear-x { position:absolute; right:6px; top:50%; transform:translateY(-50%); display:none; }
+.es-select-wrap.has-value .selector-clear-x { display:inline-flex; }
+.es-select-wrap.has-value select { padding-right:28px; }
 .ws-model-select:hover { border-color:var(--accent); }
 .ws-model-select .model-selector-list { position:absolute; top:calc(100% + 4px); left:0; right:0; background:var(--bg-white); border:1px solid var(--border); border-radius:var(--radius-sm); box-shadow:var(--shadow-md); z-index:50; display:none; }
 .ws-model-select.open .model-selector-list { display:block; }
@@ -743,6 +754,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
                   <div class="ws-model-select" id="tcPipelineSelector" onclick="toggleModelSelector('tcPipelineSelector')">
                     <span id="tcPipelineLabel">选择生产链路</span>
                     <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="2,3.5 5,6.5 8,3.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                    <span class="selector-clear-x" onclick="clearAutoOption(event,'pipeline')" title="清除选择">×</span>
                     <div class="model-selector-list">
                       <div class="model-selector-item" onclick="selectAutoOption(event,'pipeline','淘宝购物agent v1链路')">淘宝购物agent v1链路</div>
                       <div class="model-selector-item" onclick="selectAutoOption(event,'pipeline','淘宝购物agent v2链路')">淘宝购物agent v2链路</div>
@@ -755,6 +767,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
                   <div class="ws-model-select" id="tcModelSelector" onclick="toggleModelSelector('tcModelSelector')">
                     <span id="tcModelLabel">选择模型</span>
                     <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="2,3.5 5,6.5 8,3.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                    <span class="selector-clear-x" onclick="clearAutoOption(event,'model')" title="清除选择">×</span>
                     <div class="model-selector-list">
                       <div class="model-selector-item" onclick="selectAutoOption(event,'model','Qwen-Max')">Qwen-Max</div>
                       <div class="model-selector-item" onclick="selectAutoOption(event,'model','Qwen-Plus')">Qwen-Plus</div>
@@ -767,15 +780,18 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
                 <span class="tc-toggle-label">路由到指定Skill</span>
                 <div class="tc-toggle" id="tcSkillRouteToggle" onclick="tcToggleSkillRoute()"></div>
                 <div class="tc-skill-select" id="tcSkillSelect" style="display:none;">
-                  <select id="tcSkillDropdown">
-                    <option value="">选择Skill...</option>
-                    <option value="商品推荐">商品推荐</option>
-                    <option value="物流查询">物流查询</option>
-                    <option value="客服咨询">客服咨询</option>
-                    <option value="订单管理">订单管理</option>
-                    <option value="支付咨询">支付咨询</option>
-                    <option value="退换货">退换货</option>
-                  </select>
+                  <span class="tc-skill-wrap" id="tcSkillWrap">
+                    <select id="tcSkillDropdown" onchange="onSkillDropdownChange(this)">
+                      <option value="">选择Skill...</option>
+                      <option value="商品推荐">商品推荐</option>
+                      <option value="物流查询">物流查询</option>
+                      <option value="客服咨询">客服咨询</option>
+                      <option value="订单管理">订单管理</option>
+                      <option value="支付咨询">支付咨询</option>
+                      <option value="退换货">退换货</option>
+                    </select>
+                    <span class="selector-clear-x" onclick="clearNativeSelect(event,'tcSkillDropdown','tcSkillWrap')" title="清除选择">×</span>
+                  </span>
                 </div>
               </div>
               <div class="config-group" style="margin-top:12px;">
@@ -2056,6 +2072,23 @@ function selectNode(nodeId) {
 function selectNav(el) {
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   el.classList.add('active');
+  // Ensure main workspace is visible by default; specialized handlers may override after
+  const tcPage = document.getElementById('taskCreatePage');
+  if (tcPage) tcPage.style.display = 'none';
+  const dsPage = document.getElementById('datasetCreatePage');
+  if (dsPage) dsPage.style.display = 'none';
+  const esPage = document.getElementById('evalStandardPage');
+  if (esPage) esPage.style.display = 'none';
+  const dmPage = document.getElementById('datasetManagePage');
+  if (dmPage) dmPage.style.display = 'none';
+  const sdPage = document.getElementById('sampleDetailPage');
+  if (sdPage) sdPage.style.display = 'none';
+  const mainWs = document.getElementById('mainWorkspace');
+  if (mainWs) mainWs.style.display = '';
+  // Re-render samples with default eval task view if appropriate
+  if (typeof activeNode !== 'undefined' && typeof renderSamples === 'function') {
+    try { renderSamples(); } catch(e) {}
+  }
 }
 
 function showDeleteConfirm(idx) {
@@ -2383,15 +2416,33 @@ function selectDatasetSync(el, name) {
   // Disable upload and auto-gen controls
   const panel = document.getElementById('configPanel1');
   const uploadBtns = panel.querySelectorAll('.upload-btn, .ws-btn, .tc-toggle');
-  uploadBtns.forEach(b => { b.style.opacity = '0.4'; b.style.pointerEvents = 'none'; });
-  // Show selected dataset name
+  uploadBtns.forEach(b => { b.style.opacity = '0.4'; b.style.pointerEvents = 'none'; b.classList.add('sync-disabled'); });
+  // Show selected dataset chip with delete icon
   const label = panel.querySelector('label[style*="gap"]');
   if (label) {
+    // Remove any previous badge
+    const old = label.querySelector('.sync-badge');
+    if (old) old.remove();
     const badge = document.createElement('span');
-    badge.style.cssText = 'font-size:11px;background:var(--green-soft);color:var(--green);padding:3px 8px;border-radius:4px;font-weight:500;';
-    badge.textContent = '已同步: ' + name;
+    badge.className = 'sync-badge';
+    badge.style.cssText = 'display:inline-flex;align-items:center;gap:6px;font-size:11px;background:var(--green-soft);color:var(--green);padding:3px 4px 3px 8px;border-radius:4px;font-weight:500;';
+    badge.innerHTML = '<span>已同步: ' + name + '</span><span class="sync-badge-x" onclick="removeSyncedDataset(event, this)" title="移除同步" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:rgba(34,139,87,0.18);font-size:11px;line-height:1;font-weight:700;">×</span>';
     label.appendChild(badge);
   }
+}
+
+function removeSyncedDataset(e, el) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  const badge = el.closest('.sync-badge');
+  if (badge) badge.remove();
+  // Re-enable upload and auto-gen controls
+  const panel = document.getElementById('configPanel1');
+  if (!panel) return;
+  panel.querySelectorAll('.sync-disabled').forEach(b => {
+    b.style.opacity = '';
+    b.style.pointerEvents = '';
+    b.classList.remove('sync-disabled');
+  });
 }
 
 // === DATASET CREATE/DETAIL PAGE ===
@@ -2627,10 +2678,6 @@ function showEvalStandard(el, idx) {
       <div class="es-page-header">
         <button class="ws-btn" onclick="closeEvalStandardPage()">返回</button>
         <h2 class="es-page-title">${s.name}</h2>
-        <div style="display:flex;gap:8px;">
-          <button class="ws-btn primary" onclick="toggleEsPageEdit(${idx})" id="esPageEditBtn">编辑</button>
-          <button class="ws-btn primary" onclick="saveEsPageEdit(${idx})" id="esPageSaveBtn" style="display:none;">保存</button>
-        </div>
       </div>
       <div class="es-page-body" style="overflow-y:auto;padding-bottom:32px;">
         <div class="config-panel visible" style="display:block;">
@@ -2638,12 +2685,12 @@ function showEvalStandard(el, idx) {
             <div style="display:flex;align-items:center;justify-content:space-between;">
               <label style="margin:0;">评测标准名称</label>
             </div>
-            <input placeholder="输入评测标准名称..." value="${s.name}" disabled data-field="name" class="es-field">
+            <input placeholder="输入评测标准名称..." value="${s.name}" data-field="name" class="es-field">
           </div>
           <div class="config-row">
             <div class="config-group">
               <label>评测类型</label>
-              <select disabled data-field="type" class="es-field">
+              <select data-field="type" class="es-field">
                 <option value="规则匹配" ${s.type==='规则匹配'?'selected':''}>规则匹配</option>
                 <option value="Agent评测" ${s.type==='Agent评测'?'selected':''}>Agent评测</option>
                 <option value="人工评测" ${s.type==='人工评测'?'selected':''}>人工评测</option>
@@ -2651,7 +2698,7 @@ function showEvalStandard(el, idx) {
             </div>
             <div class="config-group">
               <label>评分方式</label>
-              <select disabled data-field="scoring" class="es-field">
+              <select data-field="scoring" class="es-field">
                 <option ${s.scoring==='0-1 连续打分'?'selected':''}>0-1 连续打分</option>
                 <option ${s.scoring==='1-10 离散打分'?'selected':''}>1-10 离散打分</option>
                 <option ${s.scoring==='通过/不通过'?'selected':''}>通过/不通过</option>
@@ -2661,7 +2708,7 @@ function showEvalStandard(el, idx) {
           </div>
           <div class="config-group">
             <label>评测Agent</label>
-            <select disabled data-field="agent" class="es-field">
+            <select data-field="agent" class="es-field">
               <option value="qwen-max" ${s.agent==='qwen-max'?'selected':''}>qwen-max</option>
               <option value="qwen-plus" ${s.agent==='qwen-plus'?'selected':''}>qwen-plus</option>
               <option value="qwen-turbo" ${s.agent==='qwen-turbo'?'selected':''}>qwen-turbo</option>
@@ -2671,7 +2718,7 @@ function showEvalStandard(el, idx) {
           </div>
           <div class="config-group">
             <label>评测标准</label>
-            <textarea disabled data-field="desc" class="es-field" placeholder="详细描述评测标准和评判依据...">${s.desc}</textarea>
+            <textarea data-field="desc" class="es-field" placeholder="详细描述评测标准和评判依据..." style="min-height:180px;font-size:13px;">${s.desc}</textarea>
           </div>
           <div class="config-group">
             <label>评测维度</label>
@@ -2679,11 +2726,17 @@ function showEvalStandard(el, idx) {
           </div>
           <div class="config-group">
             <label>通过阈值</label>
-            <input type="number" value="${s.threshold}" step="0.05" min="0" max="1" style="width:120px;" disabled data-field="threshold" class="es-field">
+            <input type="number" value="${s.threshold}" step="0.05" min="0" max="1" style="width:120px;" data-field="threshold" class="es-field">
+          </div>
+          <div class="es-page-footer" style="display:flex;justify-content:flex-end;gap:10px;margin-top:24px;padding-top:16px;border-top:1px solid var(--border);">
+            <button class="ws-btn" onclick="cancelEsPageEdit(${idx})">取消</button>
+            <button class="ws-btn primary" onclick="saveEsPageEdit(${idx})">保存</button>
           </div>
         </div>
       </div>
     </div>`;
+  // Snapshot original values for cancel
+  window._esPageSnapshot = JSON.parse(JSON.stringify(evalStandards[idx]));
 }
 
 function closeEvalStandardPage() {
@@ -2695,31 +2748,47 @@ function closeEvalStandardPage() {
 }
 
 function toggleEsPageEdit(idx) {
-  const page = document.getElementById('evalStandardPage');
-  const inputs = page.querySelectorAll('.es-field');
-  const editBtn = document.getElementById('esPageEditBtn');
-  const saveBtn = document.getElementById('esPageSaveBtn');
-  inputs.forEach(el => { el.disabled = false; });
-  editBtn.style.display = 'none';
-  saveBtn.style.display = 'inline-flex';
+  // Legacy no-op (fields are editable by default now)
 }
 
 function saveEsPageEdit(idx) {
   const page = document.getElementById('evalStandardPage');
+  if (!page) return;
   const inputs = page.querySelectorAll('.es-field');
-  const editBtn = document.getElementById('esPageEditBtn');
-  const saveBtn = document.getElementById('esPageSaveBtn');
   inputs.forEach(el => {
-    el.disabled = true;
     const field = el.dataset.field;
     if (field && evalStandards[idx]) {
       if (field === 'threshold') evalStandards[idx][field] = parseFloat(el.value);
-      else evalStandards[idx][field] = el.tagName === 'TEXTAREA' ? el.value : el.value;
+      else evalStandards[idx][field] = el.value;
     }
   });
-  editBtn.style.display = 'inline-flex';
-  saveBtn.style.display = 'none';
-  alert('评测标准已保存');
+  // Update snapshot
+  window._esPageSnapshot = JSON.parse(JSON.stringify(evalStandards[idx]));
+  // Show popup
+  showEsToast('评测标准已保存');
+}
+
+function cancelEsPageEdit(idx) {
+  // Restore original values from snapshot
+  if (!window._esPageSnapshot) return;
+  Object.assign(evalStandards[idx], window._esPageSnapshot);
+  // Re-render the page with original values (find current active nav item)
+  const activeNav = document.querySelector('.nav-item.active');
+  if (activeNav) showEvalStandard(activeNav, idx);
+}
+
+function showEsToast(text) {
+  const overlay = document.createElement('div');
+  overlay.className = 'es-toast-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;z-index:9999;';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `<div style="background:#fff;border-radius:8px;padding:24px 36px;box-shadow:0 8px 32px rgba(0,0,0,0.15);text-align:center;min-width:240px;">
+    <div style="font-size:28px;color:var(--green);margin-bottom:8px;">✓</div>
+    <div style="font-size:14px;color:var(--text);font-weight:500;margin-bottom:14px;">${text}</div>
+    <button class="ws-btn primary" onclick="document.querySelector('.es-toast-overlay').remove()">确定</button>
+  </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 2500);
 }
 
 // === TASK CREATE: Upload Type / Gen Mode ===
@@ -2750,14 +2819,48 @@ function selectAutoOption(event, type, value) {
   if (type === 'pipeline') {
     document.getElementById('tcPipelineLabel').textContent = value;
     document.getElementById('tcPipelineSelector').classList.remove('open');
+    document.getElementById('tcPipelineSelector').classList.add('has-value');
     pipelineGroup.classList.remove('disabled');
     modelGroup.classList.add('disabled');
   } else {
     document.getElementById('tcModelLabel').textContent = value;
     document.getElementById('tcModelSelector').classList.remove('open');
+    document.getElementById('tcModelSelector').classList.add('has-value');
     modelGroup.classList.remove('disabled');
     pipelineGroup.classList.add('disabled');
   }
+}
+
+function clearAutoOption(event, type) {
+  event.stopPropagation();
+  event.preventDefault();
+  const pipelineGroup = document.getElementById('tcPipelineGroup');
+  const modelGroup = document.getElementById('tcModelGroup');
+  if (type === 'pipeline') {
+    document.getElementById('tcPipelineLabel').textContent = '选择生产链路';
+    document.getElementById('tcPipelineSelector').classList.remove('has-value');
+    modelGroup.classList.remove('disabled');
+  } else {
+    document.getElementById('tcModelLabel').textContent = '选择模型';
+    document.getElementById('tcModelSelector').classList.remove('has-value');
+    pipelineGroup.classList.remove('disabled');
+  }
+}
+
+function onSkillDropdownChange(sel) {
+  const wrap = document.getElementById('tcSkillWrap');
+  if (sel.value) wrap.classList.add('has-value');
+  else wrap.classList.remove('has-value');
+}
+
+function clearNativeSelect(event, selectId, wrapId) {
+  event.stopPropagation();
+  event.preventDefault();
+  const sel = document.getElementById(selectId);
+  if (sel) sel.value = '';
+  const wrap = document.getElementById(wrapId);
+  if (wrap) wrap.classList.remove('has-value');
+  if (sel) sel.dispatchEvent(new Event('change'));
 }
 
 function tcToggleSkillRoute() {
