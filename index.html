@@ -799,11 +799,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
                 <input type="number" class="tc-sample-count-input" placeholder="输入样本数量" min="1" value="100" id="tcSampleCountInput" style="width:160px;">
               </div>
               <div class="tc-action-row">
-                <div class="upload-btn" onclick="simulateUpload()" style="flex:1;">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                  上传评测集
-                </div>
-                <button class="ws-btn primary" onclick="tcStartGenerate()" id="tcStartGenBtn">开始生产</button>
+                <button class="ws-btn primary" onclick="tcStartGenerate()" id="tcStartGenBtn" style="flex:1;">开始生产</button>
               </div>
             </div>
             <div class="tc-progress" id="tcProgressWrap">
@@ -1166,10 +1162,7 @@ function renderFlow() {
   const graph = document.getElementById('flowGraph');
   let html = '';
   
-  // 人工上传样本集 (single node)
-  html += renderNode(flowNodes[0]); // 人工上传样本集
-  html += renderArrow();
-  // 评测样本集
+  // 评测样本集 (start node, no manual_dataset prefix)
   html += renderNode(flowNodes[1]);
   html += renderArrow();
   // parallel judge A + B + 人工评测 (3 nodes)
@@ -1448,7 +1441,6 @@ function renderNewAssignRow(type, idx) {
         ${annotators.map(a => `<div class="assign-dropdown-item" onclick="selectAnnotator('${type}',${idx},'${a}')">${a}</div>`).join('')}
       </div>
     </div>
-    <button class="assign-confirm-btn" onclick="confirmAssign('${type}',${idx})">确认</button>
     <button class="assign-confirm-btn" style="background:var(--accent);" onclick="saveAssign('${type}',${idx})">保存</button>
     <button class="assign-add-btn" onclick="addAssignRow('${type}',${idx})" title="增加一行">+</button>
   </div>`;
@@ -1709,7 +1701,23 @@ function renderReportGenerationView() {
 
     <div class="ws-section">
       <div class="ws-section-label">报告生成要求</div>
-      <textarea class="ws-prompt-area" placeholder="输入报告生成的 Prompt...">你是一个专业的AI评测分析师。请根据以下评测数据生成一份完整的评测报告，要求：
+      <div class="rg-toolbar" style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <button class="ws-btn primary" id="rgRunBtn" onclick="rgRunGenerate()" style="display:flex;align-items:center;gap:6px;">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><polygon points="2.5,1.5 10,6 2.5,10.5"/></svg>
+          运行
+        </button>
+        <div class="ws-model-select" id="rgModelSelector" onclick="toggleModelSelector('rgModelSelector')" style="min-width:160px;">
+          <span id="rgModelLabel">Qwen-Max</span>
+          <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="2,3.5 5,6.5 8,3.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+          <div class="model-selector-list">
+            <div class="model-selector-item" onclick="rgSelectModel(event,'Qwen-Max')">Qwen-Max</div>
+            <div class="model-selector-item" onclick="rgSelectModel(event,'Qwen-Plus')">Qwen-Plus</div>
+            <div class="model-selector-item" onclick="rgSelectModel(event,'GPT-4o')">GPT-4o</div>
+            <div class="model-selector-item" onclick="rgSelectModel(event,'Claude-3.5-Sonnet')">Claude-3.5-Sonnet</div>
+          </div>
+        </div>
+      </div>
+      <textarea class="ws-prompt-area" id="rgPromptArea" placeholder="输入报告生成的 Prompt...">你是一个专业的AI评测分析师。请根据以下评测数据生成一份完整的评测报告，要求：
 1. 总结整体评测结果，包括通过率、平均分、各维度得分
 2. 列出所有Bad Case及其原因分析
 3. 给出具体的改进建议和优先级排序
@@ -1719,7 +1727,7 @@ function renderReportGenerationView() {
 
     <div class="ws-section">
       <div class="ws-section-label">报告内容</div>
-      <div class="ws-report-content">
+      <div class="ws-report-content" id="rgReportContent">
         <h3>客服Agent意图识别 · 评测报告</h3>
         <p style="color:var(--text-muted);font-size:11px;">生成时间：2026-05-15 14:32 &nbsp;|&nbsp; 评测样本：12条</p>
 
@@ -2484,7 +2492,10 @@ function showDatasetPage(data) {
   const uploadExcel = (!data || data.uploadType === 'excel') ? 'active' : '';
   const uploadOdps = (data && data.uploadType === 'odps') ? 'active' : '';
   const autoOn = data && data.autoGen;
-  const pipelineName = data ? data.pipeline : '选择生产链路';
+  const pipelineName = (data && data.pipeline) ? data.pipeline : '选择生产链路';
+  const hasPipeline = !!(data && data.pipeline);
+  const modelName = (data && data.model) ? data.model : '选择模型';
+  const hasModel = !!(data && data.model);
   const skillRouteOn = data && data.skillRoute;
   const skillVal = data ? data.skill : '';
   const sampleCount = data ? data.count : 100;
@@ -2508,7 +2519,6 @@ function showDatasetPage(data) {
               </div>
             </div>
           </div>
-          ${data ? `<div class="ds-config-result"><span class="ds-config-label">当前配置:</span> ${data.uploadType === 'excel' ? 'Excel文件上传' : 'ODPS数据表'}</div>` : ''}
         </div>
         <div class="config-group">
           <label>样本生成方式</label>
@@ -2518,25 +2528,29 @@ function showDatasetPage(data) {
           </div>
           <div class="ds-auto-block tc-auto-block" style="display:${autoOn ? 'block' : 'none'};">
             <div class="tc-selector-row">
-              <div class="tc-selector-group">
+              <div class="tc-selector-group ${hasModel ? 'disabled' : ''}" id="dsPipelineGroup">
                 <label class="tc-selector-label">生产链路选择</label>
-                <div class="ws-model-select" onclick="toggleModelSelector(this.id)" id="dsPipelineSelector_${Date.now()}">
-                  <span>${pipelineName}</span>
+                <div class="ws-model-select ${hasPipeline ? 'has-value' : ''}" id="dsPipelineSelector" onclick="toggleModelSelector('dsPipelineSelector')">
+                  <span id="dsPipelineLabel">${pipelineName}</span>
                   <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="2,3.5 5,6.5 8,3.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                  <span class="selector-clear-x" onclick="dsClearAutoOption(event,'pipeline')" title="清除选择">×</span>
                   <div class="model-selector-list">
-                    <div class="model-selector-item" onclick="event.stopPropagation();this.closest('.ws-model-select').querySelector('span').textContent=this.textContent;">淘宝购物agent v1链路</div>
-                    <div class="model-selector-item" onclick="event.stopPropagation();this.closest('.ws-model-select').querySelector('span').textContent=this.textContent;">淘宝购物agent v2链路</div>
+                    <div class="model-selector-item" onclick="dsSelectAutoOption(event,'pipeline','淘宝购物agent v1链路')">淘宝购物agent v1链路</div>
+                    <div class="model-selector-item" onclick="dsSelectAutoOption(event,'pipeline','淘宝购物agent v2链路')">淘宝购物agent v2链路</div>
+                    <div class="model-selector-item" onclick="dsSelectAutoOption(event,'pipeline','淘宝购物agent算法 v1链路')">淘宝购物agent算法 v1链路</div>
                   </div>
                 </div>
               </div>
-              <div class="tc-selector-group">
+              <div class="tc-selector-group ${hasPipeline ? 'disabled' : ''}" id="dsModelGroup">
                 <label class="tc-selector-label">模型选择</label>
-                <div class="ws-model-select" onclick="toggleModelSelector(this.id)" id="dsModelSelector_${Date.now()}">
-                  <span>选择模型</span>
+                <div class="ws-model-select ${hasModel ? 'has-value' : ''}" id="dsModelSelector" onclick="toggleModelSelector('dsModelSelector')">
+                  <span id="dsModelLabel">${modelName}</span>
                   <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="2,3.5 5,6.5 8,3.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+                  <span class="selector-clear-x" onclick="dsClearAutoOption(event,'model')" title="清除选择">×</span>
                   <div class="model-selector-list">
-                    <div class="model-selector-item" onclick="event.stopPropagation();this.closest('.ws-model-select').querySelector('span').textContent=this.textContent;">Qwen-Max</div>
-                    <div class="model-selector-item" onclick="event.stopPropagation();this.closest('.ws-model-select').querySelector('span').textContent=this.textContent;">Qwen-Plus</div>
+                    <div class="model-selector-item" onclick="dsSelectAutoOption(event,'model','Qwen-Max')">Qwen-Max</div>
+                    <div class="model-selector-item" onclick="dsSelectAutoOption(event,'model','Qwen-Plus')">Qwen-Plus</div>
+                    <div class="model-selector-item" onclick="dsSelectAutoOption(event,'model','GPT-4o')">GPT-4o</div>
                   </div>
                 </div>
               </div>
@@ -2545,20 +2559,22 @@ function showDatasetPage(data) {
               <span class="tc-toggle-label">路由到指定Skill</span>
               <div class="tc-toggle ${skillRouteOn ? 'on' : ''}" onclick="this.classList.toggle('on');this.nextElementSibling.style.display=this.classList.contains('on')?'inline-block':'none';"></div>
               <div class="tc-skill-select" style="display:${skillRouteOn ? 'inline-block' : 'none'};">
-                <select>
-                  <option value="">选择Skill...</option>
-                  <option value="商品推荐" ${skillVal === '商品推荐' ? 'selected' : ''}>商品推荐</option>
-                  <option value="物流查询" ${skillVal === '物流查询' ? 'selected' : ''}>物流查询</option>
-                  <option value="客服咨询" ${skillVal === '客服咨询' ? 'selected' : ''}>客服咨询</option>
-                  <option value="订单管理" ${skillVal === '订单管理' ? 'selected' : ''}>订单管理</option>
-                </select>
+                <span class="tc-skill-wrap ${skillVal ? 'has-value' : ''}" id="dsSkillWrap">
+                  <select id="dsSkillDropdown" onchange="onDsSkillDropdownChange(this)">
+                    <option value="">选择Skill...</option>
+                    <option value="商品推荐" ${skillVal === '商品推荐' ? 'selected' : ''}>商品推荐</option>
+                    <option value="物流查询" ${skillVal === '物流查询' ? 'selected' : ''}>物流查询</option>
+                    <option value="客服咨询" ${skillVal === '客服咨询' ? 'selected' : ''}>客服咨询</option>
+                    <option value="订单管理" ${skillVal === '订单管理' ? 'selected' : ''}>订单管理</option>
+                  </select>
+                  <span class="selector-clear-x" onclick="clearNativeSelect(event,'dsSkillDropdown','dsSkillWrap')" title="清除选择">×</span>
+                </span>
               </div>
             </div>
             <div class="config-group" style="margin-top:12px;">
               <label>样本数量</label>
               <input type="number" class="tc-sample-count-input" value="${sampleCount}" min="1" style="width:160px;">
             </div>
-            ${data ? `<div class="ds-config-result"><span class="ds-config-label">当前配置:</span> 链路=${data.pipeline || '未设置'}, Skill路由=${data.skillRoute ? data.skill : '关闭'}, 样本量=${data.count}</div>` : ''}
           </div>
         </div>
         <div class="config-group">
@@ -2569,9 +2585,9 @@ function showDatasetPage(data) {
           </div>
         </div>
       </div>
-      <div style="padding-top:16px;display:flex;gap:8px;">
-        <button class="btn" style="background:var(--accent-soft);color:var(--accent);border-color:var(--accent);" onclick="saveDataset()">保存</button>
+      <div style="padding-top:16px;display:flex;gap:8px;justify-content:center;">
         <button class="btn" onclick="closeDatasetPage()">取消</button>
+        <button class="btn" style="background:var(--accent-soft);color:var(--accent);border-color:var(--accent);" onclick="saveDataset()">保存</button>
       </div>
     </div>
   `;
@@ -2722,13 +2738,29 @@ function showEvalStandard(el, idx) {
           </div>
           <div class="config-group">
             <label>评测维度</label>
-            <div class="dim-list">${s.dims.map(d=>`<div class="dim-tag selected">${d}</div>`).join('')}</div>
+            <div class="dim-list" id="esPageDimList">${(function(){
+              var allDims = ['文本相关性','商品相关性','回复质量','准确性','安全性','完整性','逻辑性','流畅性'];
+              var selected = s.dims || [];
+              // Merge any selected items not in allDims so they still appear
+              selected.forEach(function(d){ if(allDims.indexOf(d)===-1) allDims.push(d); });
+              return allDims.map(function(d){
+                var sel = selected.indexOf(d) !== -1 ? ' selected' : '';
+                return '<div class="dim-tag'+sel+'" onclick="toggleDimTag(this)">'+d+'<span class="remove-dim" onclick="event.stopPropagation();this.parentElement.remove()">x</span></div>';
+              }).join('');
+            })()}</div>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+              <button class="btn" onclick="esShowAddDimInput()" style="padding:6px 12px;font-size:11px;" id="esAddDimBtn">+ 添加标签</button>
+              <div id="esAddDimInputWrap" style="display:none;align-items:center;gap:6px;">
+                <input placeholder="输入评测维度名称..." id="esNewDimInput" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11.5px;font-family:var(--font);width:140px;">
+                <button class="btn" onclick="esAddDimension()" style="padding:6px 12px;font-size:11px;background:var(--accent);color:#fff;border-color:var(--accent);">保存</button>
+              </div>
+            </div>
           </div>
           <div class="config-group">
             <label>通过阈值</label>
             <input type="number" value="${s.threshold}" step="0.05" min="0" max="1" style="width:120px;" data-field="threshold" class="es-field">
           </div>
-          <div class="es-page-footer" style="display:flex;justify-content:flex-end;gap:10px;margin-top:24px;padding-top:16px;border-top:1px solid var(--border);">
+          <div class="es-page-footer" style="display:flex;justify-content:center;gap:10px;margin-top:24px;padding-top:16px;border-top:1px solid var(--border);">
             <button class="ws-btn" onclick="cancelEsPageEdit(${idx})">取消</button>
             <button class="ws-btn primary" onclick="saveEsPageEdit(${idx})">保存</button>
           </div>
@@ -2762,6 +2794,12 @@ function saveEsPageEdit(idx) {
       else evalStandards[idx][field] = el.value;
     }
   });
+  // Capture selected dimensions
+  const dimList = document.getElementById('esPageDimList');
+  if (dimList) {
+    const selectedDims = Array.from(dimList.querySelectorAll('.dim-tag.selected')).map(t => t.firstChild.textContent.trim());
+    evalStandards[idx].dims = selectedDims;
+  }
   // Update snapshot
   window._esPageSnapshot = JSON.parse(JSON.stringify(evalStandards[idx]));
   // Show popup
@@ -2863,6 +2901,110 @@ function clearNativeSelect(event, selectId, wrapId) {
   if (sel) sel.dispatchEvent(new Event('change'));
 }
 
+function dsSelectAutoOption(event, type, value) {
+  event.stopPropagation();
+  const pipelineGroup = document.getElementById('dsPipelineGroup');
+  const modelGroup = document.getElementById('dsModelGroup');
+  if (type === 'pipeline') {
+    document.getElementById('dsPipelineLabel').textContent = value;
+    document.getElementById('dsPipelineSelector').classList.remove('open');
+    document.getElementById('dsPipelineSelector').classList.add('has-value');
+    pipelineGroup.classList.remove('disabled');
+    modelGroup.classList.add('disabled');
+  } else {
+    document.getElementById('dsModelLabel').textContent = value;
+    document.getElementById('dsModelSelector').classList.remove('open');
+    document.getElementById('dsModelSelector').classList.add('has-value');
+    modelGroup.classList.remove('disabled');
+    pipelineGroup.classList.add('disabled');
+  }
+}
+
+function dsClearAutoOption(event, type) {
+  event.stopPropagation();
+  event.preventDefault();
+  const pipelineGroup = document.getElementById('dsPipelineGroup');
+  const modelGroup = document.getElementById('dsModelGroup');
+  if (type === 'pipeline') {
+    document.getElementById('dsPipelineLabel').textContent = '选择生产链路';
+    document.getElementById('dsPipelineSelector').classList.remove('has-value');
+    if (modelGroup) modelGroup.classList.remove('disabled');
+  } else {
+    document.getElementById('dsModelLabel').textContent = '选择模型';
+    document.getElementById('dsModelSelector').classList.remove('has-value');
+    if (pipelineGroup) pipelineGroup.classList.remove('disabled');
+  }
+}
+
+function rgSelectModel(event, value) {
+  event.stopPropagation();
+  document.getElementById('rgModelLabel').textContent = value;
+  document.getElementById('rgModelSelector').classList.remove('open');
+}
+
+function rgRunGenerate() {
+  const btn = document.getElementById('rgRunBtn');
+  const content = document.getElementById('rgReportContent');
+  const model = document.getElementById('rgModelLabel').textContent;
+  if (!btn || !content) return;
+  // Disable button and show loading
+  btn.disabled = true;
+  const origHTML = btn.innerHTML;
+  btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="animation:rgSpin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke-dasharray="50 100"/></svg> 生成中...';
+  // Add spin keyframes if not present
+  if (!document.getElementById('rgSpinStyle')) {
+    const style = document.createElement('style');
+    style.id = 'rgSpinStyle';
+    style.textContent = '@keyframes rgSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }';
+    document.head.appendChild(style);
+  }
+  // Fade out content
+  content.style.transition = 'opacity 0.3s';
+  content.style.opacity = '0.3';
+  setTimeout(function(){
+    // Refresh the report content with new timestamp + model name
+    const ts = new Date().toLocaleString('zh-CN', {hour12: false}).replace(/\//g,'-');
+    const passRate = (70 + Math.floor(Math.random()*15));
+    const avgScore = (0.72 + Math.random()*0.12).toFixed(2);
+    const badCases = (2 + Math.floor(Math.random()*3));
+    content.innerHTML = `
+        <h3>客服Agent意图识别 · 评测报告</h3>
+        <p style="color:var(--text-muted);font-size:11px;">生成时间：${ts} &nbsp;|&nbsp; 评测样本：12条 &nbsp;|&nbsp; 模型：${model}</p>
+
+        <h3>一、评测总览</h3>
+        <p>本次评测共计 12 条样本，覆盖 5 个意图分类场景。整体通过率为 <span class="metric green">${passRate}%</span>，平均得分 <span class="metric blue">${avgScore}</span>，其中 <span class="metric red">${badCases} 个 Bad Case</span> 需要重点关注。</p>
+
+        <h3>二、各维度得分</h3>
+        <p>准确率 <span class="metric green">${(0.80 + Math.random()*0.10).toFixed(2)}</span> — 大部分意图能被正确识别，但支付类和促销类场景偏弱。</p>
+        <p>完整性 <span class="metric blue">${(0.72 + Math.random()*0.10).toFixed(2)}</span> — 部分回答缺少必要的操作指引和具体信息。</p>
+        <p>用户体验 <span class="metric red">${(0.62 + Math.random()*0.10).toFixed(2)}</span> — 低于阈值，主要问题在于缺乏主动引导和个性化回复。</p>
+        <p>安全性 <span class="metric green">${(0.92 + Math.random()*0.06).toFixed(2)}</span> — 表现优秀，未发现敏感信息泄露或不当回复。</p>
+
+        <h3>三、Bad Case 分析</h3>
+        <p><strong>#004</strong> "这个商品可以用花呗分期吗" — 得分 ${(0.38 + Math.random()*0.10).toFixed(2)}。Agent 未能准确识别为支付方式咨询意图，回答模糊未给出具体操作指引。</p>
+        <p><strong>#008</strong> "你们有没有满减活动" — 得分 ${(0.34 + Math.random()*0.10).toFixed(2)}。未识别为促销活动咨询，回答过于笼统，缺少具体活动信息。</p>
+        <p><strong>#011</strong> "商品详情页打不开怎么办" — 得分 ${(0.50 + Math.random()*0.10).toFixed(2)}。故障排查流程不完整，未引导用户进行基本排查步骤。</p>
+
+        <h3>四、改进建议</h3>
+        <p>1. <strong>支付类意图增强</strong> — 补充花呗、信用卡、分期等细分场景训练数据，预期提升准确率 10%+。</p>
+        <p>2. <strong>促销活动分类优化</strong> — "满减"、"优惠券"等高频词应触发促销意图分类。</p>
+        <p>3. <strong>主动引导策略</strong> — 在 Agent prompt 中增加主动询问用户具体需求的指令，提升用户体验得分。</p>
+
+        <h3>五、趋势分析</h3>
+        <p>综合得分提升至 ${avgScore}。本次基于 ${model} 模型生成的报告，已纳入历史趋势对比。</p>`;
+    content.style.opacity = '1';
+    btn.disabled = false;
+    btn.innerHTML = origHTML;
+  }, 1200);
+}
+
+function onDsSkillDropdownChange(sel) {
+  const wrap = document.getElementById('dsSkillWrap');
+  if (!wrap) return;
+  if (sel.value) wrap.classList.add('has-value');
+  else wrap.classList.remove('has-value');
+}
+
 function tcToggleSkillRoute() {
   const toggle = document.getElementById('tcSkillRouteToggle');
   const select = document.getElementById('tcSkillSelect');
@@ -2906,6 +3048,27 @@ function toggleDimTag(el) {
 function showAddDimInput() {
   const wrap = document.getElementById('addDimInputWrap');
   wrap.style.display = wrap.style.display === 'flex' ? 'none' : 'flex';
+}
+
+function esShowAddDimInput() {
+  const wrap = document.getElementById('esAddDimInputWrap');
+  if (!wrap) return;
+  wrap.style.display = wrap.style.display === 'flex' ? 'none' : 'flex';
+}
+
+function esAddDimension() {
+  const input = document.getElementById('esNewDimInput');
+  if (!input) return;
+  const val = input.value.trim();
+  if (!val) return;
+  const list = document.getElementById('esPageDimList');
+  if (!list) return;
+  const tag = document.createElement('div');
+  tag.className = 'dim-tag selected';
+  tag.setAttribute('onclick', 'toggleDimTag(this)');
+  tag.innerHTML = val + '<span class="remove-dim" onclick="event.stopPropagation();this.parentElement.remove()">x</span>';
+  list.appendChild(tag);
+  input.value = '';
 }
 
 // === SYNC STANDARDS MODAL ===
