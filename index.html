@@ -43,14 +43,17 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
 .app { display:grid; grid-template-columns:200px 1fr; height:100vh; overflow:hidden; }
 
 /* === SIDEBAR === */
-.sidebar { background:var(--bg-white); border-right:1px solid var(--border-light); display:flex; flex-direction:column; }
-.sidebar-header { padding:18px 16px 14px; display:flex; align-items:center; gap:10px; }
+.sidebar { background:var(--bg-white); border-right:1px solid var(--border-light); display:flex; flex-direction:column; overflow:hidden; }
+.sidebar-header { padding:18px 16px 14px; display:flex; align-items:center; gap:10px; flex-shrink:0; }
 .eva-logo { width:32px; height:32px; background: linear-gradient(135deg, var(--accent) 0%, #7cc4ff 100%); border-radius:10px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
 .eva-logo::after { content:''; position:absolute; width:12px; height:5px; background:rgba(255,255,255,0.9); border-radius:3px; top:50%; left:50%; transform:translate(-50%,-50%); box-shadow: 0 0 6px rgba(255,255,255,0.6); }
 .sidebar-header .brand { font-size:16px; font-weight:600; letter-spacing:-0.3px; color:var(--text); }
 .sidebar-header .brand-sub { font-size:10px; color:var(--text-muted); font-weight:400; margin-top:1px; letter-spacing:0.3px; }
 
-.sidebar-nav { flex:1; overflow-y:auto; padding:6px 8px; }
+.sidebar-nav { flex:1; overflow-y:auto; padding:6px 8px; min-height:0; }
+.sidebar-nav::-webkit-scrollbar { width:4px; }
+.sidebar-nav::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+.sidebar-nav::-webkit-scrollbar-thumb:hover { background:var(--text-muted); }
 .nav-section { margin-bottom:18px; }
 .nav-section-title { font-size:11px; font-weight:700; color:var(--text); padding:6px 10px 6px; letter-spacing:0.2px; text-transform:none; border-bottom:1px solid var(--border-light); margin-bottom:4px; }
 .nav-item { display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:var(--radius-sm); cursor:pointer; color:var(--text-muted); transition:all 0.12s; font-size:12px; font-weight:400; }
@@ -673,6 +676,14 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
         <div class="nav-item" onclick="showDimDetail(this, 5)">商品相关性</div>
         <div class="nav-item" onclick="showDimDetail(this, 6)">商品质量</div>
         <div class="nav-item" onclick="showDimDetail(this, 7)">商品重复性</div>
+      </div>
+      <div class="nav-section" id="productLinkSection">
+        <div class="nav-section-title" style="display:flex;align-items:center;justify-content:space-between;">产品链路接入<span class="nav-add-btn" onclick="openProductLinkCreate()" title="新建产品链路">+ 新建</span></div>
+        <div class="nav-item" onclick="showProductLink(this, 0)">千问App-购物助手<span class="task-status status-done">已接入</span></div>
+        <div class="nav-item" onclick="showProductLink(this, 1)">千问App-售后客服<span class="task-status status-done">已接入</span></div>
+        <div class="nav-item" onclick="showProductLink(this, 2)">钉钉-智能HR助理<span class="task-status status-running">接入中</span></div>
+        <div class="nav-item" onclick="showProductLink(this, 3)">淘宝-商品推荐Agent<span class="task-status status-pending">未接入</span></div>
+        <div class="nav-item" onclick="showProductLink(this, 4)">支付宝-理财顾问<span class="task-status status-pending">未接入</span></div>
       </div>
     </div>
   </div>
@@ -2232,6 +2243,8 @@ function selectNav(el) {
   if (sdPage) sdPage.style.display = 'none';
   const dimPage = document.getElementById('dimDetailPage');
   if (dimPage) dimPage.style.display = 'none';
+  const plPage = document.getElementById('productLinkPage');
+  if (plPage) plPage.style.display = 'none';
   const mainWs = document.getElementById('mainWorkspace');
   if (mainWs) mainWs.style.display = '';
   // Re-render samples with default eval task view if appropriate
@@ -3149,6 +3162,258 @@ function refreshDimNavList() {
     div.className = 'nav-item';
     div.setAttribute('onclick', 'showDimDetail(this, '+i+')');
     div.textContent = d.name;
+    section.appendChild(div);
+  });
+}
+
+function refreshDimNavList() {
+  var section = document.getElementById('dimNavSection');
+  var items = section.querySelectorAll('.nav-item');
+  items.forEach(function(el) { el.remove(); });
+  evalDimensions.forEach(function(d, i) {
+    var div = document.createElement('div');
+    div.className = 'nav-item';
+    div.setAttribute('onclick', 'showDimDetail(this, '+i+')');
+    div.textContent = d.name;
+    section.appendChild(div);
+  });
+}
+
+// === PRODUCT LINK ACCESS (产品链路接入) ===
+const productLinks = [
+  { name: '千问App-购物助手', product: '千问App', scene: '购物助手', status: 'connected', endpoint: 'https://api.qianwen.aliyun.com/agent/shopping', protocol: 'HTTP/REST', callbackUrl: 'https://eva.internal/hook/shopping', desc: '千问App购物场景的智能导购Agent，接入后可自动采集线上真实对话作为评测样本。' },
+  { name: '千问App-售后客服', product: '千问App', scene: '售后客服', status: 'connected', endpoint: 'https://api.qianwen.aliyun.com/agent/aftersale', protocol: 'HTTP/REST', callbackUrl: 'https://eva.internal/hook/aftersale', desc: '千问App售后场景客服Agent，支持工单回流和满意度数据同步。' },
+  { name: '钉钉-智能HR助理', product: '钉钉', scene: '智能HR助理', status: 'connecting', endpoint: 'https://oapi.dingtalk.com/agent/hr', protocol: 'DingTalk Open API', callbackUrl: '', desc: '钉钉平台HR智能助理Agent，处理考勤、请假、入职等HR场景。正在配置webhook回调。' },
+  { name: '淘宝-商品推荐Agent', product: '淘宝', scene: '商品推荐', status: 'pending', endpoint: '', protocol: 'HTTP/REST', callbackUrl: '', desc: '淘宝首页和搜索页商品推荐Agent，需申请数据权限后接入。' },
+  { name: '支付宝-理财顾问', product: '支付宝', scene: '理财顾问', status: 'pending', endpoint: '', protocol: 'gRPC', callbackUrl: '', desc: '支付宝理财场景的智能顾问Agent，提供投资分析和基金推荐服务。' },
+];
+
+function openProductLinkCreate() {
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('mainWorkspace').style.display = 'none';
+  document.getElementById('taskCreatePage').style.display = 'none';
+  var esPage = document.getElementById('evalStandardPage');
+  if (esPage) esPage.style.display = 'none';
+  var dmPage = document.getElementById('datasetManagePage');
+  if (dmPage) dmPage.style.display = 'none';
+  var dsPage = document.getElementById('datasetCreatePage');
+  if (dsPage) dsPage.style.display = 'none';
+  var sdPage = document.getElementById('sampleDetailPage');
+  if (sdPage) sdPage.style.display = 'none';
+  var dimPage = document.getElementById('dimDetailPage');
+  if (dimPage) dimPage.style.display = 'none';
+
+  var page = document.getElementById('productLinkPage');
+  if (!page) {
+    page = document.createElement('div');
+    page.id = 'productLinkPage';
+    page.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+    document.querySelector('.workspace').appendChild(page);
+  }
+  page.style.display = 'flex';
+  page.innerHTML = `
+    <div class="es-page">
+      <div class="es-page-header">
+        <button class="ws-btn" onclick="closeProductLinkPage()">返回</button>
+        <h2 class="es-page-title">新建产品链路接入</h2>
+      </div>
+      <div class="es-page-body" style="overflow-y:auto;padding:24px 32px;">
+        <div class="config-group">
+          <label>产品名称</label>
+          <input id="plProductInput" placeholder="输入产品名称，如：千问App、钉钉..." class="es-field">
+        </div>
+        <div class="config-group">
+          <label>场景名称</label>
+          <input id="plSceneInput" placeholder="输入场景名称，如：购物助手、售后客服..." class="es-field">
+        </div>
+        <div class="config-group">
+          <label>接入协议</label>
+          <select id="plProtocolInput" class="es-field">
+            <option value="HTTP/REST">HTTP/REST</option>
+            <option value="gRPC">gRPC</option>
+            <option value="DingTalk Open API">DingTalk Open API</option>
+            <option value="WebSocket">WebSocket</option>
+          </select>
+        </div>
+        <div class="config-group">
+          <label>Agent Endpoint</label>
+          <input id="plEndpointInput" placeholder="输入Agent服务端点URL..." class="es-field">
+        </div>
+        <div class="config-group">
+          <label>回调地址（Callback URL）</label>
+          <input id="plCallbackInput" placeholder="输入评测数据回调地址..." class="es-field">
+        </div>
+        <div class="config-group">
+          <label>链路描述</label>
+          <textarea id="plDescInput" class="es-field" placeholder="描述该产品链路的业务场景和接入目的..." style="min-height:120px;font-size:13px;"></textarea>
+        </div>
+        <div class="es-page-footer" style="display:flex;justify-content:center;gap:10px;margin-top:24px;padding-top:16px;border-top:1px solid var(--border);">
+          <button class="ws-btn" onclick="closeProductLinkPage()">取消</button>
+          <button class="ws-btn primary" onclick="saveProductLinkCreate()">保存</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function showProductLink(el, idx) {
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  var p = productLinks[idx];
+  document.getElementById('mainWorkspace').style.display = 'none';
+  document.getElementById('taskCreatePage').style.display = 'none';
+  var esPage = document.getElementById('evalStandardPage');
+  if (esPage) esPage.style.display = 'none';
+  var dmPage = document.getElementById('datasetManagePage');
+  if (dmPage) dmPage.style.display = 'none';
+  var dsPage = document.getElementById('datasetCreatePage');
+  if (dsPage) dsPage.style.display = 'none';
+  var sdPage = document.getElementById('sampleDetailPage');
+  if (sdPage) sdPage.style.display = 'none';
+  var dimPage = document.getElementById('dimDetailPage');
+  if (dimPage) dimPage.style.display = 'none';
+
+  var page = document.getElementById('productLinkPage');
+  if (!page) {
+    page = document.createElement('div');
+    page.id = 'productLinkPage';
+    page.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+    document.querySelector('.workspace').appendChild(page);
+  }
+  page.style.display = 'flex';
+  window._plEditIdx = idx;
+  window._plSnapshot = JSON.parse(JSON.stringify(p));
+
+  var statusLabel = p.status === 'connected' ? '已接入' : p.status === 'connecting' ? '接入中' : '未接入';
+  var statusClass = p.status === 'connected' ? 'status-done' : p.status === 'connecting' ? 'status-running' : 'status-pending';
+
+  page.innerHTML = `
+    <div class="es-page">
+      <div class="es-page-header">
+        <button class="ws-btn" onclick="closeProductLinkPage()">返回</button>
+        <h2 class="es-page-title">${p.name}</h2>
+        <span class="task-status ${statusClass}" style="margin-left:12px;font-size:12px;">${statusLabel}</span>
+      </div>
+      <div class="es-page-body" style="overflow-y:auto;padding:24px 32px;">
+        <div class="config-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="config-group">
+            <label>产品名称</label>
+            <input id="plProductInput" value="${p.product}" class="es-field">
+          </div>
+          <div class="config-group">
+            <label>场景名称</label>
+            <input id="plSceneInput" value="${p.scene}" class="es-field">
+          </div>
+        </div>
+        <div class="config-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="config-group">
+            <label>接入协议</label>
+            <select id="plProtocolInput" class="es-field">
+              <option value="HTTP/REST" ${p.protocol==='HTTP/REST'?'selected':''}>HTTP/REST</option>
+              <option value="gRPC" ${p.protocol==='gRPC'?'selected':''}>gRPC</option>
+              <option value="DingTalk Open API" ${p.protocol==='DingTalk Open API'?'selected':''}>DingTalk Open API</option>
+              <option value="WebSocket" ${p.protocol==='WebSocket'?'selected':''}>WebSocket</option>
+            </select>
+          </div>
+          <div class="config-group">
+            <label>接入状态</label>
+            <select id="plStatusInput" class="es-field">
+              <option value="connected" ${p.status==='connected'?'selected':''}>已接入</option>
+              <option value="connecting" ${p.status==='connecting'?'selected':''}>接入中</option>
+              <option value="pending" ${p.status==='pending'?'selected':''}>未接入</option>
+            </select>
+          </div>
+        </div>
+        <div class="config-group">
+          <label>Agent Endpoint</label>
+          <input id="plEndpointInput" value="${p.endpoint}" placeholder="输入Agent服务端点URL..." class="es-field">
+        </div>
+        <div class="config-group">
+          <label>回调地址（Callback URL）</label>
+          <input id="plCallbackInput" value="${p.callbackUrl}" placeholder="输入评测数据回调地址..." class="es-field">
+        </div>
+        <div class="config-group">
+          <label>链路描述</label>
+          <textarea id="plDescInput" class="es-field" style="min-height:120px;font-size:13px;">${p.desc}</textarea>
+        </div>
+        <div class="es-page-footer" style="display:flex;justify-content:center;gap:10px;margin-top:24px;padding-top:16px;border-top:1px solid var(--border);">
+          <button class="ws-btn" onclick="cancelProductLinkEdit()">取消</button>
+          <button class="ws-btn primary" onclick="saveProductLinkEdit(${idx})">保存</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function saveProductLinkCreate() {
+  var product = document.getElementById('plProductInput').value.trim();
+  var scene = document.getElementById('plSceneInput').value.trim();
+  if (!product || !scene) { showEsToast('请填写产品名称和场景名称'); return; }
+  var newLink = {
+    name: product + '-' + scene,
+    product: product,
+    scene: scene,
+    status: 'pending',
+    endpoint: document.getElementById('plEndpointInput').value.trim(),
+    protocol: document.getElementById('plProtocolInput').value,
+    callbackUrl: document.getElementById('plCallbackInput').value.trim(),
+    desc: document.getElementById('plDescInput').value.trim()
+  };
+  productLinks.push(newLink);
+  refreshProductLinkNav();
+  showEsToast('产品链路已创建');
+  setTimeout(function(){
+    var items = document.querySelectorAll('#productLinkSection .nav-item');
+    var el = items[productLinks.length - 1];
+    if (el) showProductLink(el, productLinks.length - 1);
+  }, 300);
+}
+
+function saveProductLinkEdit(idx) {
+  var product = document.getElementById('plProductInput').value.trim();
+  var scene = document.getElementById('plSceneInput').value.trim();
+  if (!product || !scene) { showEsToast('请填写产品名称和场景名称'); return; }
+  productLinks[idx].product = product;
+  productLinks[idx].scene = scene;
+  productLinks[idx].name = product + '-' + scene;
+  productLinks[idx].status = document.getElementById('plStatusInput').value;
+  productLinks[idx].endpoint = document.getElementById('plEndpointInput').value.trim();
+  productLinks[idx].protocol = document.getElementById('plProtocolInput').value;
+  productLinks[idx].callbackUrl = document.getElementById('plCallbackInput').value.trim();
+  productLinks[idx].desc = document.getElementById('plDescInput').value.trim();
+  window._plSnapshot = JSON.parse(JSON.stringify(productLinks[idx]));
+  refreshProductLinkNav();
+  showEsToast('产品链路已保存');
+  setTimeout(function(){
+    var items = document.querySelectorAll('#productLinkSection .nav-item');
+    var el = items[idx];
+    if (el) showProductLink(el, idx);
+  }, 300);
+}
+
+function cancelProductLinkEdit() {
+  if (typeof window._plEditIdx === 'number' && window._plSnapshot) {
+    Object.assign(productLinks[window._plEditIdx], window._plSnapshot);
+  }
+  closeProductLinkPage();
+}
+
+function closeProductLinkPage() {
+  var page = document.getElementById('productLinkPage');
+  if (page) page.style.display = 'none';
+  document.getElementById('mainWorkspace').style.display = '';
+  try { renderSamples(); } catch(e) {}
+}
+
+function refreshProductLinkNav() {
+  var section = document.getElementById('productLinkSection');
+  var items = section.querySelectorAll('.nav-item');
+  items.forEach(function(el) { el.remove(); });
+  productLinks.forEach(function(p, i) {
+    var div = document.createElement('div');
+    div.className = 'nav-item';
+    div.setAttribute('onclick', 'showProductLink(this, '+i+')');
+    var statusLabel = p.status === 'connected' ? '已接入' : p.status === 'connecting' ? '接入中' : '未接入';
+    var statusClass = p.status === 'connected' ? 'status-done' : p.status === 'connecting' ? 'status-running' : 'status-pending';
+    div.innerHTML = p.name + '<span class="task-status '+statusClass+'">'+statusLabel+'</span>';
     section.appendChild(div);
   });
 }
