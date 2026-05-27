@@ -212,7 +212,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
 .detail-view { padding:16px 20px; display:none; overflow-y:auto; }
 .detail-view.visible { display:block; }
 .detail-split { display:grid; grid-template-columns:1fr 1fr; gap:24px; height:calc(100vh - 340px); }
-.detail-split.three-col { grid-template-columns:2fr 1.2fr 1fr; }
+.detail-split.three-col { grid-template-columns:2.2fr 1fr 1fr; }
 .detail-left, .detail-right, .detail-center { display:flex; flex-direction:column; gap:14px; overflow-y:auto; padding-right:6px; }
 .detail-left::-webkit-scrollbar, .detail-right::-webkit-scrollbar, .detail-center::-webkit-scrollbar { width:4px; }
 .detail-left::-webkit-scrollbar-thumb, .detail-right::-webkit-scrollbar-thumb, .detail-center::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
@@ -232,9 +232,9 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
 .hc-textarea:focus { border-color:var(--accent); outline:none; box-shadow:0 0 0 3px var(--accent-glow); }
 .hc-upload-btn { display:inline-flex; align-items:center; gap:5px; padding:6px 12px; border:1px dashed var(--border); border-radius:var(--radius-sm); font-size:11px; color:var(--text-secondary); cursor:pointer; transition:all 0.15s; background:var(--bg-soft); }
 .hc-upload-btn:hover { border-color:var(--accent); color:var(--accent); }
-.agent-result-item { background:var(--bg-soft); border:1px solid var(--border-light); border-radius:var(--radius-sm); padding:12px 14px; }
-.agent-result-label { font-size:11px; color:var(--text-muted); font-weight:600; margin-bottom:4px; }
-.agent-result-value { font-size:13px; color:var(--text); line-height:1.6; }
+.agent-result-item { background:var(--bg-soft); border:1px solid var(--border-light); border-radius:var(--radius-sm); padding:6px 10px; display:flex; align-items:center; justify-content:space-between; }
+.agent-result-label { font-size:11px; color:var(--text-muted); font-weight:500; }
+.agent-result-value { font-size:11px; color:var(--text); }
 .detail-section { background:var(--bg-white); border:1px solid var(--border-light); border-radius:var(--radius); padding:16px 18px; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
 .detail-section-title { font-size:13px; font-weight:700; color:var(--text); margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border-light); }
 .detail-section-content { font-size:13px; line-height:1.7; color:var(--text); }
@@ -922,7 +922,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
           </div>
           <div class="config-group">
             <label>通过阈值</label>
-            <input type="number" value="0.8" step="0.05" min="0" max="1" style="width:120px;">
+            <input type="number" value="8" step="1" min="0" max="10" style="width:120px;">
           </div>
           <div class="config-group" id="annotationGroup">
             <label>标注小组</label>
@@ -2079,21 +2079,21 @@ function renderDetail(id) {
     var centerCol = `
       <div class="detail-center">
         <div class="detail-section">
-          <div class="detail-section-title">Agent 评测结果（只读）</div>
-          <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="detail-section-title" style="font-size:12px;">Agent 评测结果（只读）</div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
             ${Object.entries(d.scores).map(function([k,v]){
-              return '<div class="agent-result-item"><div class="agent-result-label">'+dimLabels[k]+'</div><div class="agent-result-value" style="font-family:var(--font-mono);font-size:16px;font-weight:700;color:'+(v>=0.8?'var(--green)':v>=0.6?'var(--orange)':'var(--red)')+'">'+v+'</div></div>';
+              return '<div class="agent-result-item"><div class="agent-result-label">'+dimLabels[k]+'</div><div class="agent-result-value" style="font-family:var(--font-mono);font-weight:600;color:'+(v>=0.8?'var(--green)':v>=0.6?'var(--orange)':'var(--red)')+'">'+v+'</div></div>';
             }).join('')}
           </div>
         </div>
         <div class="detail-section" style="flex:1;">
-          <div class="detail-section-title">Agent 评测打分原因</div>
-          <div style="font-size:12.5px;line-height:1.7;color:var(--text-secondary);background:var(--bg-soft);padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-light);">${d.reason}</div>
+          <div class="detail-section-title" style="font-size:12px;">Agent 评测打分原因</div>
+          <div style="font-size:11px;line-height:1.6;color:var(--text-secondary);background:var(--bg-soft);padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border-light);">${d.reason}</div>
         </div>
       </div>`;
 
     var dimScoreInputs = evalDimensions.map(function(dim, i){
-      return '<div class="hc-dim-score-row"><label>'+dim.name+'</label><input type="number" step="0.01" min="0" max="1" placeholder="0-1" id="hcDimScore_'+i+'"></div>';
+      return '<div class="hc-dim-score-row"><label>'+dim.name+'</label><input type="number" step="1" min="0" max="10" placeholder="0-10" id="hcDimScore_'+i+'"></div>';
     }).join('');
 
     var rightCol = `
@@ -2929,7 +2929,7 @@ function showEvalStandard(el, idx) {
           </div>
           <div class="config-group">
             <label>通过阈值</label>
-            <input type="number" value="${s.threshold}" step="0.05" min="0" max="1" style="width:120px;" data-field="threshold" class="es-field">
+            <input type="number" value="${Math.round(s.threshold*10)}" step="1" min="0" max="10" style="width:120px;" data-field="threshold" class="es-field">
           </div>
           <div class="es-page-footer" style="display:flex;justify-content:center;gap:10px;margin-top:24px;padding-top:16px;border-top:1px solid var(--border);">
             <button class="ws-btn" onclick="cancelEsPageEdit(${idx})">取消</button>
