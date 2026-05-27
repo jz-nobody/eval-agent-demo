@@ -40,7 +40,7 @@
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family: var(--font); background: var(--bg); color: var(--text); height:100vh; overflow:hidden; font-size:13px; -webkit-font-smoothing:antialiased; }
 
-.app { display:grid; grid-template-columns:200px 1fr; height:100vh; overflow:hidden; }
+.app { display:grid; grid-template-columns:200px 1fr; height:100vh; }
 
 /* === SIDEBAR === */
 .sidebar { background:var(--bg-white); border-right:1px solid var(--border-light); display:flex; flex-direction:column; overflow:hidden; }
@@ -93,10 +93,10 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
 .refresh-modal .rm-btn:hover { background:var(--accent-deep); transform:translateY(-1px); box-shadow:0 4px 12px rgba(74,158,255,0.3); }
 
 /* === WORKSPACE === */
-.workspace { display:flex; flex-direction:column; overflow:hidden; background:var(--bg); }
+.workspace { display:flex; flex-direction:column; overflow-y:auto; overflow-x:hidden; background:var(--bg); }
 
 /* Flow Panel */
-.flow-panel { background:var(--bg-white); border-bottom:1px solid var(--border-light); position:relative; }
+.flow-panel { background:var(--bg-white); border-bottom:1px solid var(--border-light); position:sticky; top:0; z-index:10; flex-shrink:0; }
 .flow-header { display:flex; align-items:center; justify-content:space-between; padding:10px 20px; border-bottom:1px solid var(--border-light); }
 .flow-header-left { display:flex; align-items:center; gap:10px; font-size:12px; color:var(--text-secondary); font-weight:500; }
 .flow-header-left .pulse { width:7px; height:7px; border-radius:50%; background:var(--green); position:relative; }
@@ -137,7 +137,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
 .legend-dot { width:3px; height:12px; border-radius:2px; }
 
 /* === SAMPLE PANEL === */
-.sample-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.sample-panel { flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden; }
 .sample-tabs-bar { display:flex; align-items:center; gap:0; background:var(--bg-white); border-bottom:1px solid var(--border-light); padding:0 20px; min-height:36px; }
 .sample-tab-item { padding:9px 14px; font-size:12px; cursor:pointer; border-bottom:2px solid transparent; color:var(--text-secondary); transition:all 0.1s; display:flex; align-items:center; gap:5px; font-weight:400; }
 .sample-tab-item:hover { color:var(--text); }
@@ -146,7 +146,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
 .sample-tab-item:hover .close-tab { opacity:0.6; }
 .sample-tab-item .close-tab:hover { opacity:1; background:var(--bg-hover); }
 
-.tab-content { flex:1; overflow-y:auto; }
+.tab-content { flex:1; overflow-y:auto; min-height:0; }
 
 /* Sample List */
 .sample-list { padding:8px 12px; }
@@ -518,7 +518,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
 .objection-input-area .objection-submit:hover { opacity:0.85; }
 
 /* === TASK CREATION PAGE === */
-.task-create-page { display:none; flex-direction:column; overflow:hidden; flex:1; }
+.task-create-page { display:none; flex-direction:column; overflow-y:auto; flex:1; }
 .task-create-page.visible { display:flex; }
 .task-create-header { padding:16px 24px; background:var(--bg-white); border-bottom:1px solid var(--border-light); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
 .task-create-header h2 { font-size:15px; font-weight:600; }
@@ -691,7 +691,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); heig
   <!-- MIDDLE WORKSPACE -->
   <div class="workspace">
     <!-- MAIN CONTENT (flow + samples) -->
-    <div id="mainWorkspace" style="display:flex;flex-direction:column;overflow:hidden;flex:1;">
+    <div id="mainWorkspace" style="display:flex;flex-direction:column;flex:1;min-height:0;">
       <!-- FLOW -->
       <div class="flow-panel">
         <div class="flow-header">
@@ -2856,7 +2856,7 @@ function showEvalStandard(el, idx) {
   if (!page) {
     page = document.createElement('div');
     page.id = 'evalStandardPage';
-    page.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+    page.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow-y:auto;';
     document.querySelector('.workspace').appendChild(page);
   }
   page.style.display = 'flex';
@@ -2866,7 +2866,7 @@ function showEvalStandard(el, idx) {
         <button class="ws-btn" onclick="closeEvalStandardPage()">返回</button>
         <h2 class="es-page-title">${s.name}</h2>
       </div>
-      <div class="es-page-body" style="overflow-y:auto;padding-bottom:32px;">
+      <div class="es-page-body" style="padding-bottom:32px;">
         <div class="config-panel visible" style="display:block;">
           <div class="config-group">
             <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -3029,7 +3029,7 @@ function openDimCreatePage() {
   if (!page) {
     page = document.createElement('div');
     page.id = 'dimDetailPage';
-    page.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+    page.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow-y:auto;';
     document.querySelector('.workspace').appendChild(page);
   }
   page.style.display = 'flex';
@@ -3039,7 +3039,7 @@ function openDimCreatePage() {
         <button class="ws-btn" onclick="closeDimDetailPage()">返回</button>
         <h2 class="es-page-title">新建评测维度</h2>
       </div>
-      <div class="es-page-body" style="overflow-y:auto;padding:24px 32px;">
+      <div class="es-page-body" style="padding:24px 32px;">
         <div class="config-group">
           <label>评测维度名称</label>
           <input id="dimNameInput" placeholder="输入评测维度名称..." class="es-field">
@@ -3075,7 +3075,7 @@ function showDimDetail(el, idx) {
   if (!page) {
     page = document.createElement('div');
     page.id = 'dimDetailPage';
-    page.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+    page.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow-y:auto;';
     document.querySelector('.workspace').appendChild(page);
   }
   page.style.display = 'flex';
@@ -3087,7 +3087,7 @@ function showDimDetail(el, idx) {
         <button class="ws-btn" onclick="closeDimDetailPage()">返回</button>
         <h2 class="es-page-title">${d.name}</h2>
       </div>
-      <div class="es-page-body" style="overflow-y:auto;padding:24px 32px;">
+      <div class="es-page-body" style="padding:24px 32px;">
         <div class="config-group">
           <label>评测维度名称</label>
           <input id="dimNameInput" placeholder="输入评测维度名称..." class="es-field" value="${d.name}">
@@ -3207,7 +3207,7 @@ function openProductLinkCreate() {
   if (!page) {
     page = document.createElement('div');
     page.id = 'productLinkPage';
-    page.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+    page.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow-y:auto;';
     document.querySelector('.workspace').appendChild(page);
   }
   page.style.display = 'flex';
@@ -3217,7 +3217,7 @@ function openProductLinkCreate() {
         <button class="ws-btn" onclick="closeProductLinkPage()">返回</button>
         <h2 class="es-page-title">新建产品链路接入</h2>
       </div>
-      <div class="es-page-body" style="overflow-y:auto;padding:24px 32px;">
+      <div class="es-page-body" style="padding:24px 32px;">
         <div class="config-group">
           <label>产品名称</label>
           <input id="plProductInput" placeholder="输入产品名称，如：千问App、钉钉..." class="es-field">
@@ -3276,7 +3276,7 @@ function showProductLink(el, idx) {
   if (!page) {
     page = document.createElement('div');
     page.id = 'productLinkPage';
-    page.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+    page.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow-y:auto;';
     document.querySelector('.workspace').appendChild(page);
   }
   page.style.display = 'flex';
@@ -3293,7 +3293,7 @@ function showProductLink(el, idx) {
         <h2 class="es-page-title">${p.name}</h2>
         <span class="task-status ${statusClass}" style="margin-left:12px;font-size:12px;">${statusLabel}</span>
       </div>
-      <div class="es-page-body" style="overflow-y:auto;padding:24px 32px;">
+      <div class="es-page-body" style="padding:24px 32px;">
         <div class="config-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
           <div class="config-group">
             <label>产品名称</label>
